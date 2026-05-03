@@ -14,6 +14,7 @@ import {
   PieChart, 
   ShieldCheck, 
   Zap, 
+  Flame,
   Lock,
   Database, 
   Receipt, 
@@ -305,17 +306,28 @@ const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 export default function App() {
   const [view, setView] = useState<'landing' | 'onboarding' | 'dashboard' | 'transactions' | 'reports' | 'settings' | 'invoices' | 'cashflow'>('landing');
   const [isLogged, setIsLogged] = useState(false);
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => { 
+    try { 
+      const s = localStorage.getItem('finai_theme'); 
+      return s ? JSON.parse(s) : 'dark'; 
+    } catch { return 'dark'; } 
+  });
   
+  useEffect(() => { 
+    localStorage.setItem('finai_theme', JSON.stringify(theme)); 
+  }, [theme])
+
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
 
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [onboardingData, setOnboardingData] = useState({
+    name: '',
     companyName: '',
     industry: 'Technology',
     teamSize: '',
+    currency: 'USD - US Dollar',
     banks: [],
     growthTarget: 45,
     maxBurn: 50000
@@ -341,29 +353,40 @@ export default function App() {
   const [messages, setMessages] = useState<{role: 'user' | 'model', content: string}[]>([
     { role: 'model', content: "Hello! I'm your AI Finance Assistant. I have access to your current ledger, cash flow projections, and runway analysis. How can I help you optimize your business today?" }
   ]);
-  const [profileData, setProfileData] = useState({
-    firstName: 'Alex',
-    lastName: 'Chen',
-    email: 'alex@lumina.ai',
-    phone: '+1 (555) 012-3456',
-    company: 'Lumina Dynamics',
-    role: 'Managing Director',
-    currency: 'USD',
-    language: 'English (US)',
-    notifications: {
-      email: true,
-      push: true,
-      sms: false,
-      reports: true
-    },
-    twoFactor: true
+  const [profileData, setProfileData] = useState(() => { 
+    const defaultValue = {
+      firstName: 'Alex',
+      lastName: 'Chen',
+      email: 'alex@lumina.ai',
+      phone: '+1 (555) 012-3456',
+      company: 'Lumina Dynamics',
+      role: 'Managing Director',
+      currency: 'USD',
+      language: 'English (US)',
+      notifications: {
+        email: true,
+        push: true,
+        sms: false,
+        reports: true
+      },
+      twoFactor: true
+    };
+    try { 
+      const s = localStorage.getItem('finai_profileData'); 
+      return s ? JSON.parse(s) : defaultValue; 
+    } catch { return defaultValue; } 
   });
+
+  useEffect(() => { 
+    localStorage.setItem('finai_profileData', JSON.stringify(profileData)); 
+  }, [profileData])
   const [savedProfileData, setSavedProfileData] = useState({...profileData});
   const [isDirty, setIsDirty] = useState(false);
   const [auditLog, setAuditLog] = useState<{id: number, timestamp: string, action: string, entityType: string, entityLabel: string, detail: string, user: string}[]>([]);
   const [lastReportSummary, setLastReportSummary] = useState<{generatedAt: Date, dateRange: string, netProfit: number, totalRevenue: number, topCategory: string} | null>(null);
   const [aiInsights, setAiInsights] = useState<{title: string, priority: 'High' | 'Medium' | 'Low', action: string, impact: string}[]>([]);
   const [aiSummary, setAiSummary] = useState<string>("Your financial summary is being analyzed by our AI models...");
+  const [reportNarrative, setReportNarrative] = useState<string | null>(null);
 
   const generateAIInsights = async () => {
     setIsGeneratingReport(true);
@@ -404,6 +427,27 @@ export default function App() {
       setAiInsights([
         { title: "Review Cash Reserves", priority: "High", action: "Assess current liquidity ratios manually due to sync error.", impact: "Risk mitigation" }
       ]);
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
+
+  const handleGeminiNarrative = async () => {
+    setIsGeneratingReport(true);
+    try {
+      const model = ai.getGenerativeModel({ model: "gemini-2.0-flash" });
+      const prompt = `Generate a high-level CFO executive summary narrative for the period ${reportConfig.startDate} to ${reportConfig.endDate}. 
+      Key metrics: Revenue ${formatCurrency(reportTotalRevenue)}, Expenses ${formatCurrency(reportTotalExpenses)}, Net Profit ${formatCurrency(reportNetProfit)}.
+      Format: CFO Memo style. Sections: 1. Executive Summary, 2. Performance Analysis, 3. Risks & Opportunities, 4. Recommendations.
+      Be professional, analytical, and concise.`;
+      
+      const result = await model.generateContent(prompt);
+      const text = await result.response.text();
+      setReportNarrative(text);
+      setToast('AI Narrative Synthesis Complete');
+    } catch (e) {
+      console.error(e);
+      setToast('Failed to generate AI narrative');
     } finally {
       setIsGeneratingReport(false);
     }
@@ -498,10 +542,20 @@ export default function App() {
   const [scenarioInput, setScenarioInput] = useState({ hired: 0, newRevenue: 0, salaryPerHead: 15000 });
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [taxRates, setTaxRates] = useState([{ name: 'GST', rate: 0.17 }]);
-  const [budgets, setBudgets] = useState<Record<string, number>>({Software: 2000, Infrastructure: 5000, Payroll: 30000, Marketing: 3000, 'Internal Ops': 2000});
+  const [budgets, setBudgets] = useState<Record<string, number>>(() => { 
+    const defaultValue = {Software: 2000, Infrastructure: 5000, Payroll: 30000, Marketing: 3000, 'Internal Ops': 2000};
+    try { 
+      const s = localStorage.getItem('finai_budgets'); 
+      return s ? JSON.parse(s) : defaultValue; 
+    } catch { return defaultValue; } 
+  });
+
+  useEffect(() => { 
+    localStorage.setItem('finai_budgets', JSON.stringify(budgets)); 
+  }, [budgets])
 
   const [transactions, setTransactions] = useState<{id: number, invId?: number, date: string, merchant: string, cat: string, status: string, amt: number, type: string, recurringInterval?: 'none'|'monthly'|'quarterly'|'annually', lastGenerated?: string, originalCurrency?: string, originalAmount?: number}[]>(() => {
-    return [
+    const defaultValue = [
       { id: 1, merchant: 'AWS Cloud Services', cat: 'Infrastructure', status: 'Reconciled', amt: -4240.21, type: 'expense' },
       { id: 2, merchant: 'Stripe Payout', cat: 'Sales', status: 'Verified', amt: 12842.00, type: 'income' },
       { id: 3, merchant: 'Salesforce CRM', cat: 'Software', status: 'Flagged', amt: -1200.00, type: 'expense' },
@@ -515,7 +569,15 @@ export default function App() {
         date: d.toISOString().split('T')[0]
       };
     });
+    try { 
+      const s = localStorage.getItem('finai_transactions'); 
+      return s ? JSON.parse(s) : defaultValue; 
+    } catch { return defaultValue; } 
   });
+
+  useEffect(() => { 
+    localStorage.setItem('finai_transactions', JSON.stringify(transactions)); 
+  }, [transactions])
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [invoiceTemplate, setInvoiceTemplate] = useState<'classic' | 'corporate' | 'minimal'>('classic');
   const [filterCategory, setFilterCategory] = useState('All');
@@ -550,54 +612,64 @@ export default function App() {
     return sortConfig.direction === 'asc' ? comparison : -comparison;
   });
   const [invoices, setInvoices] = useState<{id: number, client: string, clientEmail: string, invoiceNumber: string, status: string, amt: number, items: {id: number|string, description: string, quantity: number, price: number, taxRate?: number}[], date: string, dueDate: string, issueDate?: string}[]>(() => {
-    const baseInvoices = [
-      { 
-        id: 1, 
-        client: 'Velocity Tech', 
-        clientEmail: 'billing@velocity.tech',
-        invoiceNumber: 'INV-8421',
-        status: 'Sent', 
-        amt: 15400.00,
-        items: [
-          { id: 1, description: 'Q3 Enterprise License', quantity: 1, price: 12000.00 },
-          { id: 2, description: 'Priority Support Add-on', quantity: 1, price: 3400.00 }
-        ]
-      },
-      { 
-        id: 2, 
-        client: 'Aether Systems', 
-        clientEmail: 'finance@aether.io',
-        invoiceNumber: 'INV-8422',
-        status: 'Paid', 
-        amt: 8200.00,
-        items: [
-          { id: 1, description: 'Consulting Services', quantity: 20, price: 410.00 }
-        ]
-      },
-      { 
-        id: 3, 
-        client: 'Lumina Group', 
-        clientEmail: 'ap@lumina.cloud',
-        invoiceNumber: 'INV-8423',
-        status: 'Overdue', 
-        amt: 3100.00,
-        items: [
-          { id: 1, description: 'Cloud Resource Audit', quantity: 1, price: 3100.00 }
-        ]
-      },
-    ];
-    return baseInvoices.map((inv, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() - (i * 3 + 2));
-      const dueDate = new Date(d);
-      dueDate.setDate(dueDate.getDate() + 30);
-      return {
-        ...inv,
-        date: d.toISOString().split('T')[0],
-        dueDate: dueDate.toISOString().split('T')[0]
-      };
-    });
+    const defaultValue = (() => {
+      const baseInvoices = [
+        { 
+          id: 1, 
+          client: 'Velocity Tech', 
+          clientEmail: 'billing@velocity.tech',
+          invoiceNumber: 'INV-8421',
+          status: 'Sent', 
+          amt: 15400.00,
+          items: [
+            { id: 1, description: 'Q3 Enterprise License', quantity: 1, price: 12000.00 },
+            { id: 2, description: 'Priority Support Add-on', quantity: 1, price: 3400.00 }
+          ]
+        },
+        { 
+          id: 2, 
+          client: 'Aether Systems', 
+          clientEmail: 'finance@aether.io',
+          invoiceNumber: 'INV-8422',
+          status: 'Paid', 
+          amt: 8200.00,
+          items: [
+            { id: 1, description: 'Consulting Services', quantity: 20, price: 410.00 }
+          ]
+        },
+        { 
+          id: 3, 
+          client: 'Lumina Group', 
+          clientEmail: 'ap@lumina.cloud',
+          invoiceNumber: 'INV-8423',
+          status: 'Overdue', 
+          amt: 3100.00,
+          items: [
+            { id: 1, description: 'Cloud Resource Audit', quantity: 1, price: 3100.00 }
+          ]
+        },
+      ];
+      return baseInvoices.map((inv, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() - (i * 3 + 2));
+        const dueDate = new Date(d);
+        dueDate.setDate(dueDate.getDate() + 30);
+        return {
+          ...inv,
+          date: d.toISOString().split('T')[0],
+          dueDate: dueDate.toISOString().split('T')[0]
+        };
+      });
+    })();
+    try { 
+      const s = localStorage.getItem('finai_invoices'); 
+      return s ? JSON.parse(s) : defaultValue; 
+    } catch { return defaultValue; } 
   });
+
+  useEffect(() => { 
+    localStorage.setItem('finai_invoices', JSON.stringify(invoices)); 
+  }, [invoices])
 
   const [newTransaction, setNewTransaction] = useState<{
     id?: number,
@@ -663,11 +735,21 @@ export default function App() {
     notes: '',
     status: 'Sent'
   });
-  const [user, setUser] = useState({
-    name: 'Alex Chen',
-    email: 'alex@lumina.ai',
-    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop'
+  const [user, setUser] = useState(() => { 
+    const defaultValue = {
+      name: 'Alex Chen',
+      email: 'alex@lumina.ai',
+      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop'
+    };
+    try { 
+      const s = localStorage.getItem('finai_user'); 
+      return s ? JSON.parse(s) : defaultValue; 
+    } catch { return defaultValue; } 
   });
+
+  useEffect(() => { 
+    localStorage.setItem('finai_user', JSON.stringify(user)); 
+  }, [user])
   const isDark = theme === 'dark';
   const accentColor = isDark ? '#faf9f5' : '#000000';
   const contrastBg = isDark ? 'bg-[#faf9f5]' : 'bg-black';
@@ -769,6 +851,15 @@ export default function App() {
   const invoicesPaidMtd = invoices
     .filter(i => i.status === 'Paid' && i.date.startsWith(new Date().toISOString().substring(0, 7)))
     .reduce((s, i) => s + i.amt, 0);
+
+  const handleBatchDownload = () => {
+    setToast('Starting Batch Export...');
+    invoices.forEach((inv, i) => {
+      setTimeout(() => {
+        handleDownloadInvoicePDF(inv);
+      }, i * 1000);
+    });
+  };
 
   const avgPaymentDays = (() => {
     const paid = invoices.filter(i => i.status === 'Paid');
@@ -1210,157 +1301,256 @@ export default function App() {
   const handleDownloadInvoicePDF = (inv: any) => {
     const doc = new jsPDF();
     const primaryColor = "#C28E4A";
+    const accentColor = "#1e293b";
     
+    // Helper for currency in PDF
+    const pdfFmt = (val: number) => `${currencyCode} ${val.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+
     if (invoiceTemplate === 'corporate') {
-      // Corporate Template
+      // Corporate Template: High-impact header
       doc.setFillColor(30, 41, 59); // Slate-800
-      doc.rect(0, 0, 210, 60, "F");
+      doc.rect(0, 0, 210, 65, "F");
       
-      doc.setFontSize(32);
+      doc.setFontSize(28);
       doc.setTextColor(255);
-      doc.text("INVOICE", 20, 35);
+      doc.text("INVOICE", 20, 38);
       
       doc.setFontSize(10);
       doc.setTextColor(primaryColor);
-      doc.text(`#${inv.invoiceNumber}`, 20, 45);
+      doc.text(`REFERENCE: #${inv.invoiceNumber}`, 20, 48);
       
-      doc.setTextColor(150);
-      doc.text("AI STUDIO FINANCIALS", 190, 35, { align: "right" });
+      doc.setTextColor(200);
+      doc.setFontSize(12);
+      doc.text(profileData.company.toUpperCase(), 190, 38, { align: "right" });
+      doc.setFontSize(8);
+      doc.text(profileData.email, 190, 44, { align: "right" });
       
       // Client & Meta
-      doc.setTextColor(50);
-      doc.setFontSize(10);
-      doc.text("BILL TO", 20, 75);
+      doc.setTextColor(accentColor);
+      doc.setFontSize(9);
+      doc.text("RECIPIENT", 20, 85);
       doc.setFontSize(14);
       doc.setTextColor(0);
-      doc.text(inv.client, 20, 85);
+      doc.text(inv.client, 20, 95);
       doc.setFontSize(10);
       doc.setTextColor(100);
-      doc.text(inv.clientEmail, 20, 92);
+      doc.text(inv.clientEmail, 20, 102);
       
-      doc.setTextColor(100);
-      doc.text(`ISSUED: ${inv.date}`, 190, 75, { align: "right" });
-      doc.text(`DUE: ${inv.dueDate}`, 190, 82, { align: "right" });
-      
-      // Table
-      doc.setFillColor(248, 250, 252);
-      doc.rect(20, 110, 170, 12, "F");
       doc.setTextColor(100);
       doc.setFontSize(9);
-      doc.text("ITEM DESCRIPTION", 25, 118);
-      doc.text("QTY", 140, 118, { align: "center" });
-      doc.text("TOTAL", 185, 118, { align: "right" });
+      doc.text(`ISSUE DATE: ${inv.date}`, 190, 90, { align: "right" });
+      doc.text(`DUE DATE: ${inv.dueDate}`, 190, 97, { align: "right" });
+      doc.text(`STATUS: ${inv.status.toUpperCase()}`, 190, 104, { align: "right" });
       
-      let y = 130;
+      // Table Header
+      doc.setFillColor(248, 250, 252);
+      doc.rect(20, 120, 170, 12, "F");
+      doc.setTextColor(accentColor);
+      doc.setFontSize(9);
+      doc.text("LINE ITEM DESCRIPTION", 25, 128);
+      doc.text("QUANTITY", 130, 128, { align: "center" });
+      doc.text("UNIT PRICE", 160, 128, { align: "right" });
+      doc.text("SUBTOTAL", 185, 128, { align: "right" });
+      
+      let y = 140;
+      doc.setTextColor(0);
+      doc.setFontSize(10);
       (inv.items || []).forEach((item: any) => {
-        doc.setTextColor(0);
-        doc.setFontSize(10);
+        const lineTotal = (item.quantity || 1) * (item.price || 0);
         doc.text(item.description, 25, y);
-        doc.text(item.quantity?.toString() || "1", 140, y, { align: "center" });
-        doc.text(`$${(item.price || 0).toLocaleString()}`, 185, y, { align: "right" });
+        doc.text(item.quantity?.toString() || "1", 130, y, { align: "center" });
+        doc.text(pdfFmt(item.price), 160, y, { align: "right" });
+        doc.text(pdfFmt(lineTotal), 185, y, { align: "right" });
         y += 10;
+        
+        if (y > 250) { doc.addPage(); y = 20; }
       });
       
-      doc.setFillColor(30, 41, 59);
-      doc.rect(130, y + 10, 60, 20, "F");
-      doc.setTextColor(255);
-      doc.setFontSize(14);
-      doc.text("TOTAL", 135, y + 23);
-      doc.text(`$${inv.amt.toLocaleString()}`, 185, y + 23, { align: "right" });
+      // Summary
+      doc.setDrawColor(240);
+      doc.line(130, y + 10, 190, y + 10);
+      doc.setFontSize(16);
+      doc.setTextColor(0);
+      doc.text("TOTAL DUE", 130, y + 25);
+      doc.setTextColor(primaryColor);
+      doc.text(pdfFmt(inv.amt), 185, y + 25, { align: "right" });
       
+      // Footer
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      doc.text("Payment is due within the stipulated timeframe. Thank you for your business.", 105, 275, { align: "center" });
+      doc.text(`Generated by ${profileData.company} Institutional Ledger System`, 105, 282, { align: "center" });
+
     } else if (invoiceTemplate === 'minimal') {
-      // Minimal Template
+      // Minimal Template: Modern, whitespace-focused
+      doc.setTextColor(accentColor);
+      doc.setFontSize(24);
+      doc.text("Invoice", 20, 30);
+      
       doc.setFontSize(10);
       doc.setTextColor(150);
-      doc.text("INVOICE", 20, 20);
-      doc.text(inv.invoiceNumber, 190, 20, { align: "right" });
+      doc.text(inv.invoiceNumber, 190, 30, { align: "right" });
       
-      doc.setDrawColor(230);
-      doc.line(20, 25, 190, 25);
+      doc.setDrawColor(accentColor);
+      doc.setLineWidth(0.5);
+      doc.line(20, 38, 190, 38);
       
       doc.setTextColor(0);
-      doc.setFontSize(12);
-      doc.text(inv.client, 20, 45);
-      doc.setFontSize(9);
+      doc.setFontSize(11);
+      doc.text("Client Information", 20, 55);
+      doc.setFontSize(14);
+      doc.text(inv.client, 20, 65);
+      doc.setFontSize(10);
       doc.setTextColor(100);
-      doc.text(inv.clientEmail, 20, 50);
+      doc.text(inv.clientEmail, 20, 72);
       
-      doc.text(`Date: ${inv.date}`, 190, 45, { align: "right" });
-      doc.text(`Due: ${inv.dueDate}`, 190, 50, { align: "right" });
+      doc.text(`Billing Date: ${inv.date}`, 190, 65, { align: "right" });
+      doc.text(`Payment Due: ${inv.dueDate}`, 190, 72, { align: "right" });
       
-      let y = 80;
-      doc.setDrawColor(240);
+      let y = 100;
+      doc.setFontSize(9);
+      doc.setTextColor(150);
+      doc.text("DESCRIPTION", 20, y);
+      doc.text("TOTAL", 190, y, { align: "right" });
+      doc.line(20, y + 3, 190, y + 3);
+      y += 15;
+      
       (inv.items || []).forEach((item: any) => {
         doc.setTextColor(0);
         doc.setFontSize(10);
         doc.text(item.description, 20, y);
-        doc.text(`$${(item.price || 0).toLocaleString()}`, 190, y, { align: "right" });
-        doc.line(20, y + 4, 190, y + 4);
+        doc.text(pdfFmt((item.quantity || 1) * (item.price || 0)), 190, y, { align: "right" });
+        doc.setDrawColor(245);
+        doc.line(20, y + 5, 190, y + 5);
         y += 15;
       });
       
-      doc.setFontSize(12);
-      doc.text("Total Amount Due", 20, y + 10);
-      doc.text(`$${inv.amt.toLocaleString()}`, 190, y + 10, { align: "right" });
+      doc.setFontSize(18);
+      doc.setTextColor(accentColor);
+      doc.text("Amount Due", 20, y + 10);
+      doc.text(pdfFmt(inv.amt), 190, y + 10, { align: "right" });
       
     } else {
-      // Classic Template (Original fallback)
-      doc.setFontSize(28);
+      // Classic Template: Traditional layout
+      doc.setFontSize(32);
       doc.setTextColor(primaryColor);
       doc.text("INVOICE", 105, 30, { align: "center" });
       
-      doc.setFontSize(10);
-      doc.setTextColor(150);
-      doc.text("AI STUDIO FINANCIALS", 105, 38, { align: "center" });
+      doc.setFontSize(9);
+      doc.setTextColor(100);
+      doc.text(profileData.company.toUpperCase(), 105, 40, { align: "center" });
+      
       doc.setDrawColor(primaryColor);
-      doc.setLineWidth(0.5);
-      doc.line(20, 45, 190, 45);
+      doc.setLineWidth(1);
+      doc.line(20, 50, 190, 50);
       
-      doc.setTextColor(50);
+      doc.setTextColor(0);
       doc.setFontSize(10);
-      doc.text(`Invoice #: ${inv.invoiceNumber}`, 20, 55);
-      doc.text(`Date: ${inv.date}`, 20, 62);
-      doc.text(`Due Date: ${inv.dueDate}`, 20, 69);
-      doc.text(`Status: ${inv.status.toUpperCase()}`, 20, 76);
+      doc.text(`Invoice Number: ${inv.invoiceNumber}`, 20, 65);
+      doc.text(`Issued On: ${inv.date}`, 20, 72);
+      doc.text(`Payment Terms: Due by ${inv.dueDate}`, 20, 79);
       
+      doc.text("BILL TO:", 130, 65);
       doc.setFontSize(12);
-      doc.setTextColor(0);
-      doc.text("BILL TO:", 20, 95);
+      doc.text(inv.client, 130, 73);
       doc.setFontSize(10);
-      doc.setTextColor(80);
-      doc.text(inv.client, 20, 102);
-      doc.text(inv.clientEmail, 20, 107);
+      doc.setTextColor(100);
+      doc.text(inv.clientEmail, 130, 80);
       
-      doc.setFillColor(250, 250, 250);
-      doc.rect(20, 120, 170, 10, "F");
-      doc.setTextColor(0);
-      doc.setFontSize(10);
-      doc.text("Description", 25, 126);
-      doc.text("Qty", 140, 126, { align: "center" });
-      doc.text("Price", 185, 126, { align: "right" });
+      doc.setFillColor(240, 240, 240);
+      doc.rect(20, 100, 170, 10, "F");
+      doc.setTextColor(30);
+      doc.setFontSize(9);
+      doc.text("Description", 25, 106.5);
+      doc.text("Qty", 140, 106.5, { align: "center" });
+      doc.text("Rate", 165, 106.5, { align: "right" });
+      doc.text("Total", 185, 106.5, { align: "right" });
       
-      let yPos = 135;
+      let yPos = 118;
       (inv.items || []).forEach((item: any) => {
         doc.text(item.description, 25, yPos);
         doc.text(item.quantity?.toString() || "1", 140, yPos, { align: "center" });
-        doc.text(`$${(item.price || 0).toLocaleString()}`, 185, yPos, { align: "right" });
+        doc.text(item.price.toLocaleString(), 165, yPos, { align: "right" });
+        doc.text(((item.quantity || 1) * (item.price || 0)).toLocaleString(), 185, yPos, { align: "right" });
         yPos += 10;
       });
       
+      doc.setDrawColor(200);
       doc.line(20, yPos + 5, 190, yPos + 5);
-      doc.setFontSize(14);
+      doc.setFontSize(16);
       doc.setTextColor(primaryColor);
-      doc.text("GRAND TOTAL:", 130, yPos + 20);
-      doc.text(`$${inv.amt.toLocaleString()}`, 185, yPos + 20, { align: "right" });
+      doc.text("BALANCE DUE", 120, yPos + 20);
+      doc.text(pdfFmt(inv.amt), 185, yPos + 20, { align: "right" });
       
       doc.setFontSize(8);
       doc.setTextColor(150);
-      doc.text("This is a computer generated invoice and does not require a signature.", 105, 280, { align: "center" });
+      doc.text("Legal Notice: This document is an electronic invoice. Please retain for your records.", 105, 280, { align: "center" });
     }
     
-    doc.save(`Invoice_${inv.invoiceNumber}.pdf`);
-    setToast('PDF generated successfully');
+    if (inv.status === 'Paid') {
+      try {
+        doc.saveGraphicsState();
+        // Use a more widely compatible way to set state if available
+        if ((doc as any).setGState) {
+          const GState = (doc.constructor as any).GState;
+          if (GState) {
+            doc.setGState(new GState({ opacity: 0.15 }));
+          }
+        }
+        doc.setFontSize(60);
+        doc.setTextColor(34, 197, 94); // emerald-500
+        doc.setFont("helvetica", "bold");
+        // Ensure angle is a literal number and check options support
+        doc.text("PAID", 105, 150, { align: "center", angle: 45 });
+        doc.restoreGraphicsState();
+      } catch (e) {
+        console.warn("Watermark rendering failed", e);
+        // Fallback to simple text without fancy state if it fails
+        doc.setFontSize(40);
+        doc.setTextColor(200, 200, 200);
+        doc.text("PAID", 105, 150, { align: "center" });
+      }
+    }
+    
+    doc.save(`Invoice_${inv.invoiceNumber}_${inv.client.replace(/\s+/g, '_')}.pdf`);
+    setToast(`Invoice ${inv.invoiceNumber} Exported`);
     logAction('Downloaded Invoice PDF', 'System', 'PDF', inv.invoiceNumber);
+  };
+
+  const handleDownloadInvoiceExcel = (inv: any) => {
+    const rows = [
+      ["FINANCIAL RECORD", "OFFICIAL INVOICE DATA"],
+      ["Company", profileData.company],
+      ["Email", profileData.email],
+      [],
+      ["INVOICE HEADER"],
+      ["Invoice Number", inv.invoiceNumber],
+      ["Client Name", inv.client],
+      ["Client Email", inv.clientEmail],
+      ["Issue Date", inv.date],
+      ["Due Date", inv.dueDate],
+      ["Payment Status", inv.status],
+      ["Currency", currencyCode],
+      [],
+      ["LINE ITEMS"],
+      ["Description", "Quantity", "Unit Price", "Total (Excl Tax)"],
+      ...(inv.items || []).map((item: any) => [
+        item.description,
+        item.quantity || 1,
+        item.price,
+        (item.quantity || 1) * item.price
+      ]),
+      [],
+      ["SUMMARY"],
+      ["Grand Total", inv.amt]
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Ledger Data");
+    XLSX.writeFile(wb, `Invoice_Data_${inv.invoiceNumber}.xlsx`);
+    setToast('Raw Spreadsheet Exported');
+    logAction('Exported Invoice Excel', 'System', 'XLSX', inv.invoiceNumber);
   };
 
   const handleExportInvoicesPDF = () => {
@@ -1530,6 +1720,35 @@ export default function App() {
         desc: "Define your organization's identity to isolate fiscal reporting streams.",
         content: (
           <div className="space-y-8 py-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="group relative">
+                 <label className="absolute -top-2.5 left-4 px-2 bg-[var(--color-bg-primary)] text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--color-text-tertiary)' }}>Signatory Name</label>
+                 <input 
+                   type="text" 
+                   placeholder="Your Full Name" 
+                   value={onboardingData.name}
+                   onChange={(e) => setOnboardingData(p => ({...p, name: e.target.value}))}
+                   className="w-full bg-transparent border-2 rounded-2xl px-6 py-5 text-sm font-medium outline-none" 
+                   style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
+                 />
+              </div>
+              <div className="group relative">
+                 <label className="absolute -top-2.5 left-4 px-2 bg-[var(--color-bg-primary)] text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--color-text-tertiary)' }}>Functional Currency</label>
+                 <select 
+                   value={onboardingData.currency}
+                   onChange={(e) => setOnboardingData(p => ({...p, currency: e.target.value}))}
+                   className="w-full bg-transparent border-2 rounded-2xl px-6 py-5 text-sm font-medium outline-none appearance-none cursor-pointer"
+                   style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
+                 >
+                   <option>USD - US Dollar</option>
+                   <option>EUR - Euro</option>
+                   <option>GBP - British Pound</option>
+                   <option>AED - UAE Dirham</option>
+                   <option>PKR - Pak Rupee</option>
+                 </select>
+                 <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none opacity-40" />
+              </div>
+            </div>
             <div className="group relative">
                <label className="absolute -top-2.5 left-4 px-2 bg-[var(--color-bg-primary)] text-[10px] font-black uppercase tracking-[0.2em] transform transition-all group-focus-within:text-[#C28E4A]" style={{ color: 'var(--color-text-tertiary)' }}>Legal Entity Name</label>
                <input 
@@ -1787,7 +2006,20 @@ export default function App() {
                     if (onboardingStep < steps.length - 1) {
                       setOnboardingStep(s => s + 1);
                     } else {
-                      setProfileData(p => ({ ...p, company: onboardingData.companyName || p.company }));
+                      const updatedProfile = { 
+                        ...profileData, 
+                        company: onboardingData.companyName || profileData.company,
+                        currency: onboardingData.currency || profileData.currency
+                      };
+                      const updatedUser = { ...user, name: onboardingData.name || user.name };
+                      
+                      setProfileData(updatedProfile);
+                      setUser(updatedUser);
+                      
+                      // Explicitly save to localStorage for immediate persistence
+                      localStorage.setItem('finai_profileData', JSON.stringify(updatedProfile));
+                      localStorage.setItem('finai_user', JSON.stringify(updatedUser));
+                      
                       logAction('onboarding_complete', 'system', 'onboarding');
                       setToast('Organization environment established');
                       setView('dashboard');
@@ -1824,6 +2056,26 @@ export default function App() {
     const momRev = getMoM('income');
     const momExp = getMoM('expense');
     const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue * 100).toFixed(1) + '%' : '0%';
+    
+    // Audit Score Calculation
+    const flaggedCount = transactions.filter(t => t.status === 'Flagged').length;
+    const pendingInvCount = invoices.filter(i => i.status === 'Pending').length;
+    const overdueInvCount = overdueInvoices.length;
+    const auditScore = Math.max(0, 100 - (pendingInvCount * 5) - (flaggedCount * 3) - (overdueInvCount * 2));
+    
+    // Aging Calculation
+    const now = new Date();
+    const aging = {
+      current: invoices.filter(i => i.status !== 'Paid' && new Date(i.dueDate) >= now).reduce((s, i) => s + i.amt, 0),
+      late31: invoices.filter(i => i.status === 'Overdue' && (now.getTime() - new Date(i.dueDate).getTime()) / (1000 * 3600 * 24) <= 60).reduce((s, i) => s + i.amt, 0),
+      critical: invoices.filter(i => i.status === 'Overdue' && (now.getTime() - new Date(i.dueDate).getTime()) / (1000 * 3600 * 24) > 60).reduce((s, i) => s + i.amt, 0)
+    };
+    const totalAging = aging.current + aging.late31 + aging.critical || 1;
+    
+    // DSO Calculation
+    const dso = reportTotalRevenue > 0 ? Math.round((outstandingInvoiceTotal / reportTotalRevenue) * 90) : 0;
+    const dsoColor = dso < 30 ? 'text-emerald-500' : dso < 60 ? 'text-amber-500' : 'text-rose-500';
+
     const runwayFixed = (availableCapital + outstandingInvoiceTotal) / Math.max(monthlyBurn, 1);
     const runwayStatus = runwayFixed < 3 ? { label: 'Critical', color: 'text-red-500' } : runwayFixed < 6 ? { label: 'Warning', color: 'text-amber-500' } : { label: 'Healthy', color: 'text-emerald-500' };
 
@@ -1883,11 +2135,16 @@ export default function App() {
           className={`w-64 border-r flex flex-col fixed lg:sticky lg:h-screen z-[80] transition-transform duration-300 ${menuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} top-0 h-full`}
           style={{ background: 'var(--color-sidebar)', borderColor: 'var(--color-border)' }}
         >
-          <div className="p-8 pb-12 hidden lg:flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'var(--color-brand)', color: '#fff' }}>
-              <div className="w-4 h-4 bg-white/20 rounded-sm rotate-45"></div>
+          <div className="p-8 pb-12 hidden lg:flex flex-col gap-1">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'var(--color-brand)', color: '#fff' }}>
+                <div className="w-4 h-4 bg-white/20 rounded-sm rotate-45"></div>
+              </div>
+              <span className="text-xl font-bold tracking-tight font-display" style={{ color: 'var(--color-text-primary)' }}>Finance AI</span>
             </div>
-            <span className="text-xl font-bold tracking-tight font-display line-clamp-1" style={{ color: 'var(--color-text-primary)' }}>{profileData.company || 'Finance AI'}</span>
+            {profileData.company && (
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#C28E4A] ml-11">{profileData.company}</span>
+            )}
           </div>
 
           <nav className="flex-1 px-4 py-8 lg:py-0 space-y-2">
@@ -2539,220 +2796,331 @@ export default function App() {
             )}
 
             {view === 'reports' && (
-              <div className="space-y-6 max-w-6xl mx-auto pb-20">
-                {/* Simplified Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div>
-                    <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>AI Financial Insights</h2>
-                    <p className="text-sm text-gray-500">Intelligent analysis of your business performance.</p>
+              <div id="institutional-report-view" className="space-y-8 max-w-7xl mx-auto pb-32 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                {/* PANEL 1 — Report header and controls */}
+                <div className={`p-8 rounded-[2.5rem] border flex flex-col lg:flex-row lg:items-center justify-between gap-8 ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-white border-slate-200 shadow-xl'}`}>
+                  <div className="space-y-1">
+                    <h2 className={`text-4xl font-serif italic ${isDark ? 'text-white' : 'text-slate-950'}`}>AI Financial Reporting</h2>
+                    <p className="text-sm text-neutral-500 font-medium">Analytic Period: {reportConfig.startDate} — {reportConfig.endDate}</p>
                   </div>
-                  <div className="flex items-center gap-3">
+                  
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] uppercase font-black tracking-widest text-[#C28E4A]">Timeframe</label>
+                      <select 
+                        value={reportConfig.dateRange}
+                        onChange={(e) => setReportConfig(prev => ({ ...prev, dateRange: e.target.value }))}
+                        className={`px-4 py-2.5 rounded-xl text-xs font-bold border outline-none ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-slate-50 border-slate-200'}`}
+                      >
+                        <option value="This Month">This Month</option>
+                        <option value="This Quarter">This Quarter</option>
+                        <option value="This Year">This Year</option>
+                        <option value="Custom Range">Custom Range</option>
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] uppercase font-black tracking-widest text-[#C28E4A]">Start</label>
+                      <input 
+                        type="date" 
+                        value={reportConfig.startDate}
+                        onChange={(e) => setReportConfig(prev => ({ ...prev, startDate: e.target.value, dateRange: 'Custom Range' }))}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold border outline-none ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-slate-50 border-slate-200'}`}
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] uppercase font-black tracking-widest text-[#C28E4A]">End</label>
+                      <input 
+                        type="date" 
+                        value={reportConfig.endDate}
+                        onChange={(e) => setReportConfig(prev => ({ ...prev, endDate: e.target.value, dateRange: 'Custom Range' }))}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold border outline-none ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-slate-50 border-slate-200'}`}
+                      />
+                    </div>
+
                     <button 
                       onClick={generateAIInsights}
                       disabled={isGeneratingReport}
-                      className={`px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all flex items-center gap-2 ${
+                      className={`mt-auto px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl flex items-center gap-2 ${
                         isGeneratingReport 
-                          ? 'bg-gray-100 text-gray-400 cursor-wait'
-                          : isDark ? 'bg-white text-black hover:bg-gray-200' : 'bg-slate-900 text-white hover:bg-black'
+                          ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
+                          : 'bg-[#C28E4A] text-white hover:scale-[1.02] active:scale-[0.98]'
                       }`}
                     >
                       {isGeneratingReport ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                      {isGeneratingReport ? 'Analyzing...' : 'Refresh Insights'}
+                      Generate
                     </button>
                   </div>
                 </div>
 
-                {/* Quick Summary Card */}
-                <div className={`p-8 rounded-3xl border overflow-hidden relative ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-white border-slate-200 shadow-xl'}`}>
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-[#C28E4A]/5 rounded-full blur-3xl -mr-32 -mt-32"></div>
-                  <div className="relative z-10 flex flex-col md:flex-row gap-8 items-center">
-                    <div className="w-20 h-20 rounded-2xl bg-[#C28E4A] flex items-center justify-center text-white shrink-0 shadow-lg shadow-[#C28E4A]/20">
-                      <Bot className="w-10 h-10" />
+                {/* PANEL 2 — KPI Summary Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {[
+                    { label: 'Total Revenue', val: reportTotalRevenue, mom: momRev, color: 'text-emerald-500' },
+                    { label: 'Total Expenses', val: reportTotalExpenses, mom: momExp, color: 'text-rose-500' },
+                    { label: 'Net Profit', val: reportNetProfit, mom: { pct: profitMargin, up: reportNetProfit > 0 }, color: 'text-[#C28E4A]' },
+                    { label: 'Audit Score', val: auditScore, isScore: true, mom: { pct: 'Real-time', up: true }, color: 'text-indigo-500' }
+                  ].map((kpi, i) => (
+                    <div key={i} className={`p-8 rounded-[2rem] border relative overflow-hidden ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-white border-slate-200 shadow-sm'}`}>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500 mb-2">{kpi.label}</p>
+                      <div className="flex items-baseline gap-2 mb-4">
+                        <h4 className={`text-4xl font-serif italic ${isDark ? 'text-white' : 'text-slate-950'}`}>
+                          {kpi.isScore ? kpi.val : formatCurrency(kpi.val)}
+                        </h4>
+                        <span className={`text-[10px] font-bold ${kpi.mom.up ? 'text-emerald-500' : 'text-rose-500'}`}>
+                          {kpi.mom.pct}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-1.5 bg-neutral-100 dark:bg-white/5 rounded-full overflow-hidden">
+                           <motion.div 
+                             initial={{ width: 0 }}
+                             animate={{ width: kpi.isScore ? `${kpi.val}%` : '65%' }}
+                             className={`h-full ${kpi.color.replace('text-', 'bg-')}`}
+                           />
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className={`text-sm font-bold uppercase tracking-widest text-[#C28E4A] mb-2`}>Executive Intelligence</h3>
-                      <p className={`text-xl leading-relaxed font-medium ${isDark ? 'text-gray-200' : 'text-slate-800'}`}>
-                        {aiSummary || "Select a date range and click Refresh to generate your tailored financial summary."}
-                      </p>
+                  ))}
+                </div>
+
+                {/* PANEL 3 — P&L Table & Expense Breakdown */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  <div className={`p-8 rounded-[2.5rem] border ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-white border-slate-200'}`}>
+                    <h3 className={`text-xl font-bold mb-8 ${isDark ? 'text-white' : 'text-slate-900'}`}>Profit & Loss Summary</h3>
+                    <div className="space-y-4">
+                      {[
+                        { label: 'Operating Revenue', val: reportTotalRevenue, type: 'primary' },
+                        { label: 'Cost of Capital', val: reportTotalRevenue * 0.12, type: 'sub' },
+                        { label: 'Gross Margin', val: reportTotalRevenue * 0.88, type: 'total' },
+                        { label: 'Total Operating Expenses', val: reportTotalExpenses, type: 'primary' },
+                        { label: 'Net Operating Income', val: reportNetProfit, type: 'final' }
+                      ].map((row, i) => (
+                        <div key={i} className={`flex justify-between items-center py-3 ${row.type === 'total' || row.type === 'final' ? 'border-t border-neutral-100 dark:border-white/5 mt-4 pt-6' : ''}`}>
+                          <span className={`text-xs uppercase font-bold tracking-widest ${row.type === 'final' ? 'text-[#C28E4A]' : 'text-neutral-500'}`}>
+                            {row.label}
+                          </span>
+                          <span className={`text-lg font-bold ${row.type === 'final' ? 'text-2xl font-serif italic' : ''} ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                            {formatCurrency(row.val)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className={`p-8 rounded-[2.5rem] border ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-white border-slate-200'}`}>
+                    <h3 className={`text-xl font-bold mb-8 ${isDark ? 'text-white' : 'text-slate-900'}`}>Expense Verticalization</h3>
+                    <div className="space-y-6">
+                      {getExpenseBreakdown(reportFilteredTransactions).slice(0, 5).map((cat, i) => (
+                        <div key={i} className="space-y-2">
+                          <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-neutral-400">
+                            <span>{cat.name}</span>
+                            <span>{((cat.value / (reportTotalExpenses || 1)) * 100).toFixed(1)}%</span>
+                          </div>
+                          <div className="h-10 w-full bg-neutral-100 dark:bg-white/5 rounded-2xl overflow-hidden flex items-center px-4">
+                             <span className={`text-sm font-bold absolute ${isDark ? 'text-white' : 'text-slate-900'}`}>{formatCurrency(cat.value)}</span>
+                             <motion.div 
+                               initial={{ width: 0 }}
+                               animate={{ width: `${(cat.value / (reportTotalExpenses || 1)) * 100}%` }}
+                               className="h-full bg-[#C28E4A]/20"
+                             />
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
 
-                {/* Main Metrics & Charts */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* P&L Performance Chart */}
-                  <div className={`lg:col-span-2 p-8 rounded-3xl border ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-white border-slate-200 shadow-sm'}`}>
+                {/* PANEL 4 — Revenue Trend & AI Insights */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  <div className={`lg:col-span-2 p-8 rounded-[2.5rem] border ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-white border-slate-200'}`}>
                     <div className="flex items-center justify-between mb-8">
-                       <h3 className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Profit & Loss Trend</h3>
-                       <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">
-                         <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-[#C28E4A]"></div> Income</div>
-                         <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-slate-300"></div> Expense</div>
-                       </div>
+                      <h3 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Revenue Performance & Forecast</h3>
+                      <div className="flex gap-4">
+                        <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#C28E4A]"></div><span className="text-[10px] font-bold uppercase text-neutral-500">Actual</span></div>
+                        <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-neutral-300"></div><span className="text-[10px] font-bold uppercase text-neutral-500">Forecast</span></div>
+                      </div>
                     </div>
-                    <div className="h-[300px]">
+                    <div className="h-[340px]">
                       <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={[
-                          { name: 'Prev', income: reportTotalRevenue * 0.7, expense: reportTotalExpenses * 0.8 },
-                          { name: 'Curr', income: reportTotalRevenue, expense: reportTotalExpenses },
-                          { name: 'Proj', income: reportTotalRevenue * 1.15, expense: reportTotalExpenses * 1.05 },
-                        ]}>
+                        <AreaChart data={revenueChartData}>
                           <defs>
-                            <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#C28E4A" stopOpacity={0.3}/>
+                            <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#C28E4A" stopOpacity={0.4}/>
                               <stop offset="95%" stopColor="#C28E4A" stopOpacity={0}/>
                             </linearGradient>
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'} />
-                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#888'}} />
-                          <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#888'}} />
-                          <RechartsTooltip 
-                             contentStyle={{ borderRadius: '12px', border: 'none', background: '#111', color: '#fff', fontSize: '12px' }}
-                          />
-                          <Area type="monotone" dataKey="income" stroke="#C28E4A" strokeWidth={3} fillOpacity={1} fill="url(#chartGrad)" />
-                          <Area type="monotone" dataKey="expense" stroke="#888" strokeWidth={2} fill="transparent" strokeDasharray="5 5" />
+                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#888', fontWeight: 700}} />
+                          <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#888', fontWeight: 700}} tickFormatter={(val) => `$${val/1000}k`} />
+                          <RechartsTooltip contentStyle={{ borderRadius: '16px', border: 'none', background: '#111', color: '#fff' }} />
+                          <Area type="monotone" dataKey="revenue" stroke="#C28E4A" strokeWidth={4} fillOpacity={1} fill="url(#revGrad)" />
+                          <Area type="monotone" dataKey="projection" stroke="#888" strokeWidth={2} fill="transparent" strokeDasharray="6 6" />
                         </AreaChart>
                       </ResponsiveContainer>
                     </div>
                   </div>
 
-                  {/* Top Spending Categories */}
-                  <div className={`p-8 rounded-3xl border ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-white border-slate-200 shadow-sm'}`}>
-                    <h3 className={`font-bold mb-6 ${isDark ? 'text-white' : 'text-slate-900'}`}>Top Spending</h3>
+                  <div className={`p-8 rounded-[2.5rem] border ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-white border-slate-200'}`}>
+                    <div className="flex items-center gap-3 mb-8">
+                       <Sparkles className="w-5 h-5 text-[#C28E4A]" />
+                       <h3 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>AI Strategy Memo</h3>
+                    </div>
                     <div className="space-y-6">
-                      {getExpenseBreakdown(reportFilteredTransactions).slice(0, 5).map((item, i) => (
-                        <div key={i} className="space-y-2">
-                          <div className="flex justify-between text-xs">
-                             <span className="font-bold text-gray-500 uppercase tracking-widest">{item.name}</span>
-                             <span className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{formatCurrency(item.value)}</span>
+                      {aiInsights.slice(0, 3).map((insight, i) => (
+                        <div key={i} className={`p-6 rounded-3xl border border-dashed ${isDark ? 'border-white/10 hover:border-[#C28E4A]/30' : 'border-slate-200 hover:border-[#C28E4A]/30'} transition-all`}>
+                          <div className="flex items-center justify-between mb-3">
+                            <span className={`text-[10px] font-black uppercase tracking-widest ${insight.priority === 'High' ? 'text-rose-500' : 'text-[#C28E4A]'}`}>{insight.priority} Priority</span>
                           </div>
-                          <div className="h-2 w-full bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
-                             <motion.div 
-                               initial={{ width: 0 }}
-                               animate={{ width: `${(item.value / reportTotalExpenses) * 100}%` }}
-                               className="h-full bg-[#C28E4A]"
-                             />
-                          </div>
+                          <h4 className={`text-sm font-bold mb-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>{insight.title}</h4>
+                          <p className="text-xs text-neutral-500 leading-relaxed font-medium">{insight.impact}</p>
                         </div>
                       ))}
-                      {reportFilteredTransactions.length === 0 && (
-                        <div className="h-full flex items-center justify-center text-center opacity-30">
-                           <p className="text-xs font-bold uppercase py-20">No expense data found</p>
-                        </div>
-                      )}
+                      {aiInsights.length === 0 && <p className="text-xs text-neutral-500 italic py-12 text-center">Hit 'Generate' to synthesize strategic insights.</p>}
                     </div>
                   </div>
                 </div>
 
-                {/* Financial Health Meter */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                   <div className={`p-8 rounded-3xl border flex flex-col justify-between ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-white border-slate-200 shadow-sm'}`}>
-                      <div>
-                        <h3 className={`font-bold uppercase tracking-widest text-[10px] text-gray-500 mb-6`}>Liquidity Health</h3>
-                        <div className="flex items-end gap-3 mb-4">
-                           <span className={`text-4xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                             {((reportTotalRevenue / (reportTotalExpenses || 1)) * 10).toFixed(1)}
-                           </span>
-                           <span className="text-xs text-emerald-500 font-bold mb-1.5 uppercase">Strong</span>
-                        </div>
-                        <div className="w-full h-3 bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden flex">
-                           <div className="h-full bg-emerald-500" style={{ width: '70%' }}></div>
-                           <div className="h-full bg-amber-500" style={{ width: '20%' }}></div>
-                           <div className="h-full bg-rose-500" style={{ width: '10%' }}></div>
-                        </div>
-                      </div>
-                      <p className="text-[10px] text-gray-400 mt-6 leading-relaxed italic">
-                        Based on your revenue-to-expense ratio, your liquidity is optimized for the next 30 days.
-                      </p>
-                   </div>
+                {/* PANEL 5 — Accounts Receivable Aging */}
+                <div className={`p-8 rounded-[2.5rem] border ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-white border-slate-200 shadow-sm'}`}>
+                  <h3 className={`text-xl font-bold mb-8 ${isDark ? 'text-white' : 'text-slate-900'}`}>Arrears & Aging Analysis</h3>
+                  <div className="flex flex-col md:flex-row gap-12 items-center">
+                    <div className="flex-1 w-full space-y-4">
+                       <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-neutral-500">
+                          <span>Aging Bucket Dynamics</span>
+                          <span>Total: {formatCurrency(totalAging)}</span>
+                       </div>
+                       <div className="h-4 w-full bg-neutral-100 dark:bg-white/5 rounded-full overflow-hidden flex">
+                          <div className="h-full bg-emerald-500" style={{ width: `${(aging.current / totalAging) * 100}%` }}></div>
+                          <div className="h-full bg-amber-500" style={{ width: `${(aging.late31 / totalAging) * 100}%` }}></div>
+                          <div className="h-full bg-rose-500" style={{ width: `${(aging.critical / totalAging) * 100}%` }}></div>
+                       </div>
+                       <div className="grid grid-cols-3 gap-4 pt-4">
+                          <div className="space-y-1">
+                             <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div><span className="text-[10px] font-bold text-neutral-400">Current</span></div>
+                             <p className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{formatCurrency(aging.current)}</p>
+                          </div>
+                          <div className="space-y-1">
+                             <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div><span className="text-[10px] font-bold text-neutral-400">31-60 Days</span></div>
+                             <p className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{formatCurrency(aging.late31)}</p>
+                          </div>
+                          <div className="space-y-1">
+                             <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-rose-500"></div><span className="text-[10px] font-bold text-neutral-400">61+ Critical</span></div>
+                             <p className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{formatCurrency(aging.critical)}</p>
+                          </div>
+                       </div>
+                    </div>
+                    <div className={`p-8 rounded-3xl border ${isDark ? 'bg-white/[0.02] border-white/5' : 'bg-slate-50 border-slate-100'} min-w-[280px]`}>
+                       <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500 block mb-2">Collection Efficacy</span>
+                       <div className="flex items-baseline gap-2 mb-4">
+                          <h4 className={`text-3xl font-serif italic ${isDark ? 'text-white' : 'text-slate-950'}`}>88.4%</h4>
+                          <span className="text-[10px] font-bold text-emerald-500">+2.1%</span>
+                       </div>
+                       <p className="text-xs text-neutral-400 leading-relaxed font-medium">Your average collection cycle is currently trending positive.</p>
+                    </div>
+                  </div>
+                </div>
 
-                   <div className={`p-8 rounded-3xl border flex flex-col justify-between ${isDark ? 'bg-[#C28E4A] border-[#C28E4A] text-white' : 'bg-slate-900 border-slate-800 text-white shadow-xl'}`}>
-                      <div>
-                        <h3 className="font-bold uppercase tracking-widest text-[10px] text-white/50 mb-6">Pending Cash Inflow</h3>
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-4xl font-bold">
-                            {formatCurrency(invoices.filter(i => i.status === 'Pending').reduce((s, i) => s + i.amt, 0))}
-                          </span>
-                        </div>
-                        <p className="text-xs text-white/70 mt-2">Expected from {invoices.filter(i => i.status === 'Pending').length} active invoices.</p>
-                      </div>
-                      <div className="mt-8 flex items-center gap-4">
-                         <div className="flex-1">
-                            <div className="flex justify-between text-[9px] font-black uppercase mb-1">
-                               <span>Collection Rate</span>
-                               <span>92%</span>
-                            </div>
-                            <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden">
-                               <div className="h-full bg-white w-[92%]"></div>
-                            </div>
+                {/* PANEL 6 — Forecasting */}
+                <div className={`p-8 rounded-[2.5rem] border ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-white border-slate-200'}`}>
+                  <h3 className={`text-xl font-bold mb-8 ${isDark ? 'text-white' : 'text-slate-900'}`}>Forward Projections</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    {[
+                      { label: 'Projected EBITDA', value: reportNetProfit * 1.15, icon: <TrendingUp className="w-4 h-4" /> },
+                      { label: 'Next Quarter Rev', value: reportTotalRevenue * 1.25, icon: <Zap className="w-4 h-4" /> },
+                      { label: 'Monthly Burn Rate', value: monthlyBurn, icon: <Flame className="w-4 h-4" /> },
+                      { label: 'Days Sales Outstanding', value: dso, icon: <Clock className="w-4 h-4" />, isCustom: true }
+                    ].map((proj, i) => (
+                      <div key={i} className="space-y-3">
+                         <div className="flex items-center gap-2 text-neutral-500">
+                            {proj.icon}
+                            <span className="text-[10px] font-black uppercase tracking-widest">{proj.label}</span>
                          </div>
-                         <button onClick={() => setView('invoices')} className="p-3 rounded-xl bg-white/20 hover:bg-white/30 transition-all">
-                            <ArrowUpRight className="w-4 h-4" />
-                         </button>
+                         <p className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'} ${proj.isCustom ? dsoColor : ''}`}>
+                            {proj.isCustom ? `${proj.value} Days` : formatCurrency(proj.value)}
+                         </p>
                       </div>
-                   </div>
+                    ))}
+                  </div>
                 </div>
 
-                {/* AI Action Steps */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {aiInsights.length > 0 ? aiInsights.map((insight, i) => (
-                    <motion.div 
-                      key={i}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.1 }}
-                      className={`p-6 rounded-[2rem] border group hover:border-[#C28E4A]/30 transition-all ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-white border-slate-200 shadow-sm'}`}
-                    >
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-6 shadow-sm ${
-                        insight.priority === 'High' ? 'bg-rose-500/10 text-rose-500' :
-                        insight.priority === 'Medium' ? 'bg-amber-500/10 text-amber-500' :
-                        'bg-emerald-500/10 text-emerald-500'
-                      }`}>
-                        {i === 0 ? <TrendingUp className="w-5 h-5" /> : i === 1 ? <ShieldCheck className="w-5 h-5" /> : <Target className="w-5 h-5" />}
-                      </div>
-                      <h4 className={`text-md font-bold mb-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>{insight.title}</h4>
-                      <p className="text-xs text-gray-500 leading-relaxed mb-4">{insight.action}</p>
-                      <div className="pt-4 border-t border-gray-100 dark:border-white/5 flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                        <span className={insight.priority === 'High' ? 'text-rose-500' : 'text-emerald-500'}>{insight.priority} Priority</span>
-                        <span className="text-gray-400">{insight.impact}</span>
-                      </div>
-                    </motion.div>
-                  )) : (
-                    Array(3).fill(0).map((_, i) => (
-                      <div key={i} className={`h-48 rounded-[2rem] border animate-pulse ${isDark ? 'bg-white/[0.01] border-white/5' : 'bg-slate-50 border-slate-100'}`} />
-                    ))
-                  )}
-                </div>
-
-                {/* Export Options */}
-                <div className={`p-8 rounded-[2rem] border flex flex-col md:flex-row items-center justify-between gap-6 ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-slate-900 border-slate-800 text-white shadow-xl'}`}>
+                {/* PANEL 7 — Export Options */}
+                <div className={`p-8 rounded-[2.5rem] border flex flex-col md:flex-row items-center justify-between gap-8 ${isDark ? 'bg-[#C28E4A] border-[#C28E4A] text-white shadow-2xl shadow-[#C28E4A]/20' : 'bg-slate-900 border-slate-800 text-white shadow-2xl shadow-slate-950/40'}`}>
                    <div>
-                      <h4 className="text-lg font-bold">Export Official Reports</h4>
-                      <p className="text-xs text-gray-400">Download formatted statements for external sharing.</p>
+                      <h4 className="text-2xl font-serif italic">Finalize Reporting Protocol</h4>
+                      <p className="text-sm text-white/60 font-medium">Download encrypted financial summaries for institutional sharing.</p>
                    </div>
-                   <div className="flex gap-3">
+                   <div className="flex flex-wrap gap-4">
+                      <button 
+                        onClick={handleExportCSV}
+                        className="px-6 py-4 rounded-2xl bg-white/10 hover:bg-white/20 transition-all text-xs font-black uppercase tracking-[0.2em] inline-flex items-center gap-3"
+                      >
+                         <Database className="w-4 h-4" />
+                         CSV Ledger
+                      </button>
                       <button 
                         onClick={() => {
-                          const rows = [
-                            ["Date", "Merchant", "Category", "Amount", "Type"],
-                            ...reportFilteredTransactions.map(t => [t.date, t.merchant, t.cat, t.amt.toString(), t.type])
-                          ];
-                          const ws = XLSX.utils.aoa_to_sheet(rows);
-                          const wb = XLSX.utils.book_new();
-                          XLSX.utils.book_append_sheet(wb, ws, "Financials");
-                          XLSX.writeFile(wb, `AI_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
-                          setToast('Excel report generated');
+                          const el = document.getElementById('institutional-report-view');
+                          if (el) {
+                            toPng(el, { cacheBust: true, backgroundColor: isDark ? '#000' : '#fff' }).then(dataUrl => {
+                               const elWidth = el.offsetWidth || 1;
+                               const elHeight = el.offsetHeight || 1;
+                               const imgWidth = 210;
+                               const imgHeight = (elHeight * imgWidth) / elWidth;
+                               
+                               // Create PDF with custom height if it exceeds A4 to avoid clipping or use A4 and scale
+                               // For institutional reports, a single long page is often preferred for digital view,
+                               // or standard A4 if it's for print. Let's use A4 but scale correctly.
+                               const pdf = new jsPDF({
+                                 orientation: 'p',
+                                 unit: 'mm',
+                                 format: imgHeight > 297 ? [210, imgHeight] : 'a4'
+                               });
+                               
+                               pdf.addImage(dataUrl, 'PNG', 0, 0, 210, imgHeight);
+                               pdf.save(`AI_Financial_Report_${reportConfig.startDate}.pdf`);
+                               setToast('Institutional PDF Exported');
+                            }).catch(err => {
+                               console.error('PDF Export Error:', err);
+                               setToast('Export Failed: Viewport too small');
+                            });
+                          }
                         }}
-                        className="px-6 py-3 rounded-xl border border-white/10 hover:bg-white/5 text-xs font-bold uppercase tracking-widest transition-all inline-flex items-center gap-2"
+                        className="px-6 py-4 rounded-2xl bg-white text-black hover:bg-neutral-100 transition-all text-xs font-black uppercase tracking-[0.2em] inline-flex items-center gap-3"
                       >
-                        <Database className="w-4 h-4" />
-                        Excel Ledger
+                         <Download className="w-4 h-4" />
+                         Full PDF Report
                       </button>
-                      <button className="px-6 py-3 rounded-xl bg-white text-black hover:bg-gray-200 text-xs font-bold uppercase tracking-widest transition-all inline-flex items-center gap-2">
-                        <Download className="w-4 h-4" />
-                        Download PDF
+                      <button 
+                        onClick={handleGeminiNarrative}
+                        disabled={isGeneratingReport}
+                        className="px-6 py-4 rounded-2xl bg-black text-white hover:bg-black/80 transition-all text-xs font-black uppercase tracking-[0.2em] inline-flex items-center gap-3 border border-white/10"
+                      >
+                         {isGeneratingReport ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bot className="w-4 h-4" />}
+                         Narrative Analysis
                       </button>
                    </div>
                 </div>
+
+                {/* AI Narrative Modal / Section */}
+                {reportNarrative && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className={`p-10 rounded-[3rem] border ${isDark ? 'bg-white/[0.05] border-white/10' : 'bg-white border-slate-200 shadow-2xl'}`}
+                  >
+                    <div className="flex items-center justify-between mb-8">
+                       <h3 className={`text-2xl font-serif italic ${isDark ? 'text-white' : 'text-slate-900'}`}>Executive Summary Memo</h3>
+                       <button onClick={() => setReportNarrative(null)} className="p-3 rounded-full hover:bg-neutral-100 dark:hover:bg-white/10"><X className="w-5 h-5" /></button>
+                    </div>
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                       <div className={`whitespace-pre-wrap leading-relaxed text-lg font-medium ${isDark ? 'text-neutral-300' : 'text-slate-700'}`}>
+                          {reportNarrative}
+                       </div>
+                    </div>
+                  </motion.div>
+                )}
               </div>
             )}
 
@@ -2946,7 +3314,16 @@ export default function App() {
               <div className="space-y-8">
                 <div className="flex justify-between items-center">
                    <h2 className="text-xl font-bold font-serif italic" style={{ color: 'var(--color-text-primary)' }}>Invoice Management</h2>
-                   <div className="flex gap-3">
+                   <div className="flex flex-wrap items-center gap-3">
+                     <Tooltip text="Batch Client Records">
+                       <button 
+                         onClick={handleBatchDownload}
+                         className="p-2.5 rounded-full border transition-all hover:bg-[var(--color-bg-hover)] flex items-center justify-center"
+                         style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-tertiary)' }}
+                       >
+                         <Database className="w-3.5 h-3.5" />
+                       </button>
+                     </Tooltip>
                      <button 
                       onClick={handleExportInvoicesExcel}
                       className="px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest border transition-all flex items-center gap-2"
@@ -4586,6 +4963,13 @@ export default function App() {
                     style={{ background: 'var(--color-bg-secondary)', color: 'var(--color-text-secondary)', borderColor: 'var(--color-border)' }}
                   >
                     Send Reminder
+                  </button>
+                  <button 
+                    onClick={() => handleDownloadInvoiceExcel(selectedInvoice)}
+                    className="flex-1 py-4 rounded-2xl border text-xs font-bold uppercase tracking-widest transition-all hover:bg-[var(--color-bg-hover)]"
+                    style={{ background: 'var(--color-bg-secondary)', color: 'var(--color-text-secondary)', borderColor: 'var(--color-border)' }}
+                  >
+                    Export Data
                   </button>
                   <button 
                     onClick={() => handleDownloadInvoicePDF(selectedInvoice)}
