@@ -1,0 +1,218 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+@import "tailwindcss";
+
+/* ── Anthropic-style design tokens ── */
+:root {
+  /* Typography */
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Palette — neutrals */
+  --color-neutral-50:  #FAFAF9;
+  --color-neutral-100: #F5F4F0;
+  --color-neutral-200: #E8E6DF;
+  --color-neutral-300: #C9C7BC;
+  --color-neutral-500: #888780;
+  --color-neutral-700: #444441;
+  --color-neutral-900: #1A1A18;
+  --color-neutral-950: #0D0D0B;
+
+  /* Palette — brand warm */
+  --color-brand-base: #FAEEDA;
+  --color-blue-50:  #FAEEDA;
+  --color-blue-100: #F7DDB5;
+  --color-blue-300: #E6B980;
+  --color-blue-500: #C28E4A;
+  --color-blue-700: #855F2E;
+  --color-blue-900: #4B361B;
+
+  /* Palette — income green */
+  --color-green-50:  #EAF3DE;
+  --color-green-100: #C0DD97;
+  --color-green-300: #639922;
+  --color-green-500: #3B6D11;
+  --color-green-700: #27500A;
+  --color-green-900: #173404;
+
+  /* Palette — expense red */
+  --color-red-50:  #FCEBEB;
+  --color-red-100: #F7C1C1;
+  --color-red-300: #E24B4A;
+  --color-red-500: #A32D2D;
+  --color-red-700: #791F1F;
+  --color-red-900: #501313;
+
+  /* Palette — amber / warning */
+  --color-amber-50:  #FAEEDA;
+  --color-amber-100: #FAC775;
+  --color-amber-300: #EF9F27;
+  --color-amber-500: #854F0B;
+  --color-amber-700: #633806;
+
+  /* Palette — teal */
+  --color-teal-50:  #E1F5EE;
+  --color-teal-300: #1D9E75;
+  --color-teal-500: #0F6E56;
+  --color-teal-700: #085041;
+
+  /* Palette — purple */
+  --color-purple-50:  #EEEDFE;
+  --color-purple-300: #7F77DD;
+  --color-purple-500: #534AB7;
+  --color-purple-700: #3C3489;
+
+  /* ── Semantic: backgrounds ── */
+  --color-bg-primary:   #FFFFFF;
+  --color-bg-secondary: #F5F4F0;
+  --color-bg-tertiary:  #E8E6DF;
+  --color-bg-hover:     rgba(0,0,0,0.04);
+  --color-bg-active:    rgba(0,0,0,0.08);
+  --color-sidebar:      #FAFAF9;
+  --color-header:       rgba(255,255,255,0.85);
+
+  /* ── Semantic: borders ── */
+  --color-border:        rgba(0,0,0,0.10);
+  --color-border-subtle: rgba(0,0,0,0.06);
+  --color-border-strong: rgba(0,0,0,0.18);
+
+  /* ── Semantic: text ── */
+  --color-text-primary:   #1A1A18;
+  --color-text-secondary: #444441;
+  --color-text-tertiary:  #888780;
+  --color-text-disabled:  #C9C7BC;
+  --color-text-inverse:   #FFFFFF;
+
+  /* ── Semantic: brand ── */
+  --color-brand:        #C28E4A;
+  --color-brand-hover:  #855F2E;
+  --color-brand-subtle: #FAEEDA;
+  --color-brand-text:   #855F2E;
+
+  /* ── Finance semantic: income ── */
+  --color-income:        #27500A;
+  --color-income-bg:     #EAF3DE;
+  --color-income-border: #C0DD97;
+  --color-income-strong: #3B6D11;
+  --color-income-chart:  #639922;
+
+  /* ── Finance semantic: expense ── */
+  --color-expense:        #791F1F;
+  --color-expense-bg:     #FCEBEB;
+  --color-expense-border: #F7C1C1;
+  --color-expense-strong: #A32D2D;
+  --color-expense-chart:  #E24B4A;
+
+  /* ── Finance semantic: statuses ── */
+  --color-reconciled:    #085041;
+  --color-reconciled-bg: #E1F5EE;
+  --color-pending:       #633806;
+  --color-pending-bg:    #FAEEDA;
+  --color-flagged:       #791F1F;
+  --color-flagged-bg:    #FCEBEB;
+  --color-verified:      #855F2E;
+  --color-verified-bg:   #FAEEDA;
+  --color-verified-border: #F7DDB5;
+
+  /* ── Chart colors ── */
+  --chart-1:             #C28E4A;
+  --chart-2:             #E24B4A;
+  --chart-3:             #1D9E75;
+  --chart-4:             #EF9F27;
+  --chart-5:             #7F77DD;
+  --chart-6:             #D85A30;
+  --chart-7:             #888780;
+  --chart-8:             #0F6E56;
+  --chart-grid:          rgba(0,0,0,0.07);
+  --chart-axis:          #888780;
+  --chart-tooltip-bg:    #FFFFFF;
+  --chart-tooltip-border:rgba(0,0,0,0.10);
+  --chart-area-income:   rgba(99,153,34,0.12);
+  --chart-area-expense:  rgba(226,75,74,0.10);
+  --chart-area-revenue:  rgba(194,142,74,0.12);
+
+  /* ── Radius ── */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+}
+
+/* ── Dark mode overrides ── */
+.dark {
+  --color-bg-primary:   #0D0D0B;
+  --color-bg-secondary: #161614;
+  --color-bg-tertiary:  #1F1F1C;
+  --color-bg-hover:     rgba(255,255,255,0.04);
+  --color-bg-active:    rgba(255,255,255,0.08);
+  --color-sidebar:      #0A0A09;
+  --color-header:       rgba(13,13,11,0.85);
+
+  --color-border:        rgba(255,255,255,0.08);
+  --color-border-subtle: rgba(255,255,255,0.05);
+  --color-border-strong: rgba(255,255,255,0.14);
+
+  --color-text-primary:   #EEECEA;
+  --color-text-secondary: #C9C7BC;
+  --color-text-tertiary:  #888780;
+  --color-text-disabled:  #444441;
+  --color-text-inverse:   #0D0D0B;
+
+  --color-brand:        #E6B980;
+  --color-brand-hover:  #FAEEDA;
+  --color-brand-subtle: rgba(230,185,128,0.12);
+  --color-brand-text:   #F7DDB5;
+
+  --color-income:        #C0DD97;
+  --color-income-bg:     rgba(99,153,34,0.12);
+  --color-income-border: rgba(99,153,34,0.25);
+  --color-income-strong: #97C459;
+  --color-income-chart:  #97C459;
+
+  --color-expense:        #F7C1C1;
+  --color-expense-bg:     rgba(226,75,74,0.12);
+  --color-expense-border: rgba(226,75,74,0.25);
+  --color-expense-strong: #F09595;
+  --color-expense-chart:  #F09595;
+
+  --color-reconciled:    #9FE1CB;
+  --color-reconciled-bg: rgba(29,158,117,0.12);
+  --color-pending:       #FAC775;
+  --color-pending-bg:    rgba(239,159,39,0.12);
+  --color-flagged:       #F7C1C1;
+  --color-flagged-bg:    rgba(226,75,74,0.10);
+  --color-verified:      #855F2E;
+  --color-verified-bg:   rgba(194,142,74,0.12);
+  --color-verified-border: rgba(194,142,74,0.25);
+  --color-blue-100: #F7DDB5;
+
+  --chart-grid:           rgba(255,255,255,0.07);
+  --chart-tooltip-bg:     #1F1F1C;
+  --chart-tooltip-border: rgba(255,255,255,0.08);
+  --chart-area-income:    rgba(99,153,34,0.18);
+  --chart-area-expense:   rgba(226,75,74,0.16);
+  --chart-area-revenue:   rgba(194,142,74,0.18);
+}
+
+/* ── Base styles ── */
+* { box-sizing: border-box; }
+body {
+  font-family: var(--font-sans);
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.2s, color 0.2s;
+}
+
+/* ── Utility classes for finance badges ── */
+.badge-income     { color:var(--color-income);     background:var(--color-income-bg);     border:0.5px solid var(--color-income-border); }
+.badge-expense    { color:var(--color-expense);    background:var(--color-expense-bg);    border:0.5px solid var(--color-expense-border); }
+.badge-pending    { color:var(--color-pending);    background:var(--color-pending-bg);    border:0.5px solid var(--color-amber-100); }
+.badge-reconciled { color:var(--color-reconciled); background:var(--color-reconciled-bg); border:0.5px solid var(--color-teal-300); }
+.badge-flagged    { color:var(--color-flagged);    background:var(--color-flagged-bg);    border:0.5px solid var(--color-red-100); }
+.badge-verified   { color:var(--color-verified);   background:var(--color-verified-bg);   border:0.5px solid var(--color-verified-border); }
+
+/* ── Scrollbar ── */
+.scrollbar-hide::-webkit-scrollbar { display:none; }
+.scrollbar-hide { -ms-overflow-style:none; scrollbar-width:none; }
