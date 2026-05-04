@@ -50,7 +50,8 @@ import {
   DollarSign,
   Sparkles,
   AlertCircle,
-  Trash2
+  Trash2,
+  RefreshCw
 } from "lucide-react";
 import Markdown from "react-markdown";
 import { toPng } from 'html-to-image';
@@ -220,6 +221,95 @@ const STATS = [
   { label: "Data Integrity", value: "99.99%" }
 ];
 
+const BLOG_POSTS = [
+  {
+    id: 1,
+    title: "The Future of AI-Driven Bookkeeping",
+    excerpt: "How generative models are transforming the way small businesses manage their ledgers without manual entry.",
+    content: `
+# The Future of AI-Driven Bookkeeping
+
+For decades, bookkeeping has been synonymous with manual data entry, rows of spreadsheets, and the risk of human error. But we are entering a new era. 
+
+At **Finance AI**, we believe that business owners should focus on growth, not receipts. Our latest transformer models are now capable of:
+
+1. **Autonomous Reconciliation**: Identifying matches between bank feeds and invoices with 99.9% accuracy.
+2. **Predictive Burn Analysis**: Forecasting when you'll need your next round of funding based on real-time spending patterns.
+3. **Anomaly Detection**: Flagging suspicious transactions before they become audit liabilities.
+
+The future isn't about better spreadsheets; it's about the disappearance of the spreadsheet entirely as a manual tool. 
+    `,
+    date: "May 1, 2024",
+    author: "Alex Chen, Founder"
+  },
+  {
+    id: 2,
+    title: "Maximizing Runway in a Volatile Market",
+    excerpt: "Strategic financial planning tips for startups looking to extend their cash reserves during economic shifts.",
+    content: `
+# Maximizing Runway in a Volatile Market
+
+Efficiency is the new growth. In the current economic climate, understanding your cash flow isn't just "good management"—it's a survival skill.
+
+### 1. Optimize Variable Costs
+Identify subscriptions that have drifted into the "ghost" category. Our AI intelligence feed automatically flags recurring payments that haven't been utilized in over 60 days.
+
+### 2. Accelerate Receivables
+Don't wait for your clients to remember. Automated invoicing with intelligent follow-ups can reduce your Average Collection Period by up to 14 days.
+
+### 3. Maintain Liquidity Buffers
+We recommend maintaining at least 6 months of burn in liquid assets. Our predictive dashboard helps you visualize exactly how different hiring scenarios or marketing spends will impact that buffer.
+
+Stay lean, stay informed, and let intelligence drive your decisions.
+    `,
+    date: "April 24, 2024",
+    author: "Elena Rodriguez, VP Finance"
+  }
+];
+
+const PRIVACY_POLICY = `
+# Privacy Policy
+
+**Effective Date: May 4, 2024**
+
+At Finance AI, your financial privacy is our highest priority. This policy outlines how we handle your data with institutional-grade security.
+
+### 1. Data Collection
+We collect financial transaction data via secure, read-only API connections through certified partners (e.g., Plaid). We never store your raw banking passwords.
+
+### 2. How We Use Data
+Your data is used exclusively to:
+* Provide automated bookkeeping and reporting.
+* Generate AI-driven financial insights.
+* Improve our predictive models (using anonymized, aggregated datasets).
+
+### 3. Data Security
+All data is encrypted using AES-256 at rest and TLS 1.3 in transit. Our infrastructure is hosted in SOC2 Type II compliant environments.
+
+### 4. Your Rights
+You maintain full ownership of your data. You can export your entire ledger or delete your account and all associated data at any time through the settings panel.
+`;
+
+const TERMS_OF_SERVICE = `
+# Terms of Service
+
+**Last Updated: May 4, 2024**
+
+By using Finance AI, you agree to the following terms of operation.
+
+### 1. Account Security
+You are responsible for maintaining the confidentiality of your account credentials. Any unauthorized use should be reported immediately.
+
+### 2. Service Description
+Finance AI provides financial management tools. While our AI offers high-accuracy insights, it does not constitute legal, tax, or professional accounting advice. Always consult with a certified professional for formal filings.
+
+### 3. Subscription & Billing
+Fees are billed in advance on a monthly or annual basis. You can cancel at any time, but no refunds will be provided for partial months of service.
+
+### 4. Limitation of Liability
+Finance AI shall not be liable for any indirect, incidental, or consequential damages resulting from the use or inability to use the service.
+`;
+
 const BLOGS = [
   {
     title: "Visualize, simplify, and optimize your financial workflow",
@@ -238,45 +328,146 @@ const BLOGS = [
   }
 ];
 
-const PRICING = [
+const PRICING_TIERS = [
   {
-    name: "Basic",
-    price: "$299",
+    name: "FREE",
+    price: "$0",
     period: "/mo",
-    desc: "Essential AI-driven bookkeeping for small teams.",
+    desc: "Forever free. No card required.",
+    button: "Get started free",
     features: [
-      "Automated bank reconciliation",
-      "Standard financial reporting",
-      "Email support",
-      "Up to 500 transactions/mo"
+      { text: "Up to 30 transactions/mo", included: true, bold: true },
+      { text: "Up to 3 invoices/mo", included: true, bold: true },
+      { text: "Basic dashboard", included: true },
+      { text: "1 bank account connect", included: true },
+      { text: "Manual bookkeeping", included: true },
+      { text: "5 AI chat messages/mo", included: true, bold: true },
+      { text: "AI cashflow prediction", included: false },
+      { text: "Reports & export", included: false },
+      { text: "Recurring transactions", included: false },
+      { text: "Multi-currency", included: false },
     ]
   },
   {
-    name: "Pro",
-    price: "$799",
+    name: "STARTER",
+    price: "$19",
     period: "/mo",
-    desc: "Advanced intelligence for rapidly scaling startups.",
+    desc: "Billed monthly. Cancel anytime.",
+    button: "Start 14-day trial",
     features: [
-      "Real-time burn optimization",
-      "Predictive cash flow modeling",
-      "Priority API support",
-      "Unlimited transactions"
-    ],
-    highlight: true
+      { text: "Up to 500 transactions/mo", included: true, bold: true },
+      { text: "Up to 20 invoices/mo", included: true, bold: true },
+      { text: "Full dashboard + charts", included: true },
+      { text: "3 bank accounts", included: true },
+      { text: "AI chat — 100 msg/mo", included: true, bold: true },
+      { text: "CSV export", included: true },
+      { text: "Basic reports", included: true },
+      { text: "AI cashflow prediction", included: false },
+      { text: "Scenario simulator", included: false },
+      { text: "Multi-currency", included: false },
+    ]
   },
   {
-    name: "Enterprise",
-    price: "Custom",
-    period: "",
-    desc: "Institutional-grade solutions for complex ecosystems.",
+    name: "BUSINESS",
+    price: "$39",
+    period: "/mo",
+    desc: "Save $96/yr with annual billing.",
+    button: "Start 14-day trial",
+    highlight: true,
+    mostPopular: true,
     features: [
-      "Custom AI model training",
-      "Dedicated account team",
-      "On-premise deployment options",
-      "SSO & advanced security"
+      { text: "Unlimited transactions", included: true, bold: true },
+      { text: "Unlimited invoices", included: true, bold: true },
+      { text: "AI cashflow prediction", included: true },
+      { text: "Scenario simulator", included: true },
+      { text: "AI chat — unlimited", included: true, bold: true },
+      { text: "Multi-currency support", included: true },
+      { text: "Advanced reports + PDF", included: true },
+      { text: "Recurring transactions", included: true },
+      { text: "Tax module (GST/VAT)", included: true },
+      { text: "Team members (multi-user)", included: false },
+      { text: "White-label/API access", included: false },
+    ]
+  },
+  {
+    name: "PRO",
+    price: "$79",
+    period: "/mo",
+    desc: "For agencies & growing teams.",
+    button: "Start 14-day trial",
+    features: [
+      { text: "Everything in Business", included: true },
+      { text: "5 team members", included: true, bold: true },
+      { text: "Role-based permissions", included: true },
+      { text: "3 business entities", included: true, bold: true },
+      { text: "Priority AI processing", included: true },
+      { text: "Bank reconciliation", included: true },
+      { text: "Client portal access", included: true },
+      { text: "Audit trail log", included: true },
+      { text: "Dedicated onboarding", included: true },
+      { text: "API access", included: true },
     ]
   }
 ];
+
+const PricingTier = ({ tier, isDark, handleLogin }: { tier: any, isDark: boolean, handleLogin: () => void }) => (
+  <div 
+    className={`relative p-8 rounded-[2rem] border flex flex-col transition-all duration-500 overflow-hidden ${
+      tier.highlight 
+        ? 'bg-white/[0.03] border-[#C28E4A]/30 ring-1 ring-[#C28E4A]/20 shadow-[0_0_50px_-12px_rgba(194,142,74,0.15)]' 
+        : 'bg-white/[0.01] border-white/5 shadow-sm hover:translate-y-[-4px] hover:bg-white/[0.02]'
+    }`}
+  >
+    {tier.mostPopular && (
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 mt-3 px-4 py-1.5 bg-[#4F46E5]/10 border border-[#4F46E5]/30 text-[#818CF8] text-[9px] font-black uppercase tracking-widest rounded-full backdrop-blur-xl z-10 shadow-2xl">
+        Most popular
+      </div>
+    )}
+
+    {tier.highlight && (
+      <div className="absolute -inset-x-20 -top-20 -bottom-20 pointer-events-none opacity-[0.03] bg-gradient-to-b from-[#C28E4A] to-transparent blur-[100px] -z-10" />
+    )}
+
+    <div className="mb-10 text-left">
+      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-8">{tier.name}</h3>
+      <div className="flex items-end gap-1 mb-2">
+        <span className={`text-6xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>{tier.price}</span>
+        <span className="text-sm font-medium text-gray-500 mb-2">{tier.period}</span>
+      </div>
+      <p className="text-xs text-gray-500 leading-relaxed min-h-[3rem] font-medium">{tier.desc}</p>
+    </div>
+
+    <button 
+      onClick={handleLogin}
+      className={`w-full py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all mb-10 ${
+        tier.highlight 
+          ? 'bg-white/5 border border-white/20 text-white hover:bg-white/10 hover:border-white/30 shadow-xl' 
+          : 'bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10 hover:border-white/20'
+      }`}
+    >
+      {tier.button}
+    </button>
+
+    <div className="space-y-4.5 flex-1 text-left">
+      {tier.features.map((feature: any, idx: number) => (
+        <div key={idx} className={`flex items-start gap-4 ${!feature.included ? 'opacity-30 grayscale blur-[0.2px]' : ''}`}>
+          <div className={`mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0 transition-all ${
+            feature.included 
+              ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.7)] ring-4 ring-emerald-500/10' 
+              : 'bg-gray-600'
+          }`} />
+          <span className={`text-[11px] leading-snug tracking-tight ${feature.bold ? 'font-bold' : 'font-medium'} ${
+            !feature.included 
+              ? 'line-through decoration-gray-600 text-gray-500' 
+              : isDark ? 'text-gray-300' : 'text-slate-700'
+          }`}>
+            {feature.text}
+          </span>
+        </div>
+      ))}
+    </div>
+  </div>
+);
 
 const FAQS = [
   {
@@ -304,7 +495,8 @@ const FAQS = [
 const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export default function App() {
-  const [view, setView] = useState<'landing' | 'onboarding' | 'dashboard' | 'transactions' | 'reports' | 'settings' | 'invoices' | 'cashflow'>('landing');
+  const [view, setView] = useState<'landing' | 'onboarding' | 'dashboard' | 'transactions' | 'reports' | 'settings' | 'invoices' | 'cashflow' | 'pricing' | 'privacy' | 'terms' | 'blog' | 'blog-post'>('landing');
+  const [selectedBlogId, setSelectedBlogId] = useState<number | null>(null);
   const [isLogged, setIsLogged] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>(() => { 
     try { 
@@ -402,8 +594,10 @@ export default function App() {
         }
       };
 
+      const runwayVal = (availableCapital + outstandingInvoiceTotal) / Math.max(monthlyBurn, 1);
       const prompt = `Act as an expert financial advisor. Analyze this data: ${JSON.stringify(context)}. 
-      Provide a simple 1-sentence executive summary and 3 clear, actionable steps to improve profitability or cash flow.
+      Provide a simple 1-sentence executive summary reflecting the current path and 3 clear, actionable steps to improve profitability or cash flow.
+      Consider the runway of ${runwayVal.toFixed(1)} months and current burn of ${formatCurrency(monthlyBurn)}.
       Format as JSON:
       {
         "summary": "...",
@@ -618,7 +812,7 @@ export default function App() {
           id: 1, 
           client: 'Velocity Tech', 
           clientEmail: 'billing@velocity.tech',
-          invoiceNumber: 'INV-8421',
+          invoiceNumber: 'INV-1001',
           status: 'Sent', 
           amt: 15400.00,
           items: [
@@ -630,7 +824,7 @@ export default function App() {
           id: 2, 
           client: 'Aether Systems', 
           clientEmail: 'finance@aether.io',
-          invoiceNumber: 'INV-8422',
+          invoiceNumber: 'INV-1002',
           status: 'Paid', 
           amt: 8200.00,
           items: [
@@ -641,7 +835,7 @@ export default function App() {
           id: 3, 
           client: 'Lumina Group', 
           clientEmail: 'ap@lumina.cloud',
-          invoiceNumber: 'INV-8423',
+          invoiceNumber: 'INV-1003',
           status: 'Overdue', 
           amt: 3100.00,
           items: [
@@ -726,15 +920,31 @@ export default function App() {
     AUD: 0.65,
     CAD: 0.73
   };
+  const getNextInvoiceNumber = () => {
+    if (!invoices || invoices.length === 0) return 'INV-1000';
+    const numbers = invoices.map(inv => {
+      const match = inv.invoiceNumber.match(/\d+/);
+      return match ? parseInt(match[0], 10) : 0;
+    });
+    const maxNum = Math.max(...numbers, 999);
+    return `INV-${maxNum + 1}`;
+  };
+
   const [newInvoice, setNewInvoice] = useState({
     client: '',
     clientEmail: '',
-    invoiceNumber: 'INV-' + Math.floor(Math.random() * 9000 + 1000),
+    invoiceNumber: '', // Will be set when opening modal or on mount
     dueDate: '',
     items: [{ id: 1, description: '', quantity: 1, price: 0, taxRate: 0 }],
     notes: '',
     status: 'Sent'
   });
+
+  useEffect(() => {
+    if (showCreateInvoice) {
+      setNewInvoice(prev => ({ ...prev, invoiceNumber: getNextInvoiceNumber() }));
+    }
+  }, [showCreateInvoice]);
   const [user, setUser] = useState(() => { 
     const defaultValue = {
       name: 'Alex Chen',
@@ -886,6 +1096,18 @@ export default function App() {
     .reduce((sum, t) => sum + Math.abs(t.amt), 0);
 
   const reportNetProfit = reportTotalRevenue - reportTotalExpenses;
+
+  const waterfallData = [
+    { name: 'Revenue', value: reportTotalRevenue, start: 0, fill: '#C28E4A' },
+    { name: 'Cost/Rev', value: -(reportTotalRevenue * 0.15), start: reportTotalRevenue, fill: '#ef4444' },
+    { name: 'Gross Margin', value: reportTotalRevenue * 0.85, start: 0, fill: '#C28E4A', isTotal: true },
+    { name: 'OpEx', value: -reportTotalExpenses, start: reportTotalRevenue * 0.85, fill: '#f87171' },
+    { name: 'Net Profit', value: reportNetProfit, start: 0, fill: '#10b981', isTotal: true },
+  ].map(d => ({ 
+    ...d, 
+    base: d.value > 0 ? 0 : d.start + (d.isTotal ? 0 : d.value), 
+    top: Math.abs(d.value) 
+  }));
 
   const getRevenuePerformanceData = () => {
     const dataByMonth: { [key: string]: { revenue: number, expense: number } } = {};
@@ -1174,7 +1396,7 @@ export default function App() {
     setNewInvoice({
       client: '',
       clientEmail: '',
-      invoiceNumber: 'INV-' + Math.floor(Math.random() * 9000 + 1000),
+      invoiceNumber: '', // This will be reset via the useEffect on showCreateInvoice next time
       dueDate: '',
       items: [{ id: 1, description: '', quantity: 1, price: 0, taxRate: 0 }],
       notes: '',
@@ -1927,7 +2149,7 @@ export default function App() {
               </div>
               
               <div className="max-w-md">
-                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[#C28E4A] mb-8 block">Protocol 01 — Configuration</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[#C28E4A] mb-8 block">Protocol 0{onboardingStep + 1} — {steps[onboardingStep].title}</span>
                 <h1 className="text-7xl font-serif italic text-white leading-[0.9] mb-12">Building the future of capital.</h1>
                 <p className="text-xl text-neutral-400 font-light leading-relaxed">
                   "The most successful organizations are defined by the speed at which they can transmute data into conviction."
@@ -1967,14 +2189,41 @@ export default function App() {
 
               {/* Progress Stepper */}
               <div className="mb-20">
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-[10px] uppercase font-black tracking-[0.2em]" style={{ color: 'var(--color-text-tertiary)' }}>Stage {onboardingStep + 1} of {steps.length}</span>
-                  <div className="flex gap-1.5">
-                     {steps.map((_, i) => (
-                       <div key={i} className={`h-1.5 rounded-full transition-all duration-500 ${i <= onboardingStep ? 'w-8 bg-[#C28E4A]' : 'w-2 bg-[var(--color-bg-tertiary)]'}`}></div>
-                     ))}
+                <div className="flex justify-between items-end mb-6">
+                  <div>
+                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[#C28E4A] mb-2 block">Initialization Protocol</span>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-4xl font-serif italic" style={{ color: 'var(--color-text-primary)' }}>0{onboardingStep + 1}</span>
+                      <span className="text-sm font-light text-gray-500">/ 0{steps.length}</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-2">Completion Status</span>
+                    <span className="text-xs font-bold" style={{ color: 'var(--color-text-primary)' }}>{Math.round(((onboardingStep + 1) / steps.length) * 100)}%</span>
                   </div>
                 </div>
+
+                <div className="relative h-1.5 w-full bg-[var(--color-bg-tertiary)] rounded-full overflow-hidden mb-12">
+                   <div className="absolute inset-0 flex gap-1 px-0.5 py-0.5">
+                      {steps.map((_, i) => (
+                        <div key={i} className="flex-1 h-full relative">
+                           {/* Background Track Segment */}
+                           <div className="absolute inset-0 bg-white/5 rounded-full"></div>
+                           {/* Active fill */}
+                           <motion.div 
+                             initial={false}
+                             animate={{ 
+                               width: i <= onboardingStep ? '100%' : '0%',
+                               opacity: i <= onboardingStep ? 1 : 0
+                             }}
+                             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                             className="absolute inset-0 bg-[#C28E4A] rounded-full shadow-[0_0_10px_rgba(194,142,74,0.3)]"
+                           />
+                        </div>
+                      ))}
+                   </div>
+                </div>
+
                 <h2 className="text-5xl font-serif italic mb-4" style={{ color: 'var(--color-text-primary)' }}>{steps[onboardingStep].title}</h2>
                 <p className="text-[var(--color-text-secondary)] text-base font-light font-sans">{steps[onboardingStep].desc}</p>
               </div>
@@ -2042,6 +2291,12 @@ export default function App() {
   }
 
   if (isLogged) {
+    const handleChartDrillDown = (category?: string, status?: string) => {
+      if (category && category !== 'Total') setFilterCategory(category);
+      if (status) setFilterStatus(status);
+      setView('transactions');
+    };
+
     const getMoM = (type: 'income' | 'expense') => {
       const now = new Date();
       const thisM = now.getMonth(), thisY = now.getFullYear();
@@ -2088,15 +2343,34 @@ export default function App() {
         if (t.type === 'income') buckets[key].revenue += t.amt;
         if (t.type === 'expense') buckets[key].expenses += Math.abs(t.amt);
       });
+
+      // Calculate simple trend based on last 3 months
+      const historicalPoints = Array.from({ length: 4 }, (_, i) => {
+        const d = new Date(); d.setMonth(d.getMonth() - (4 - i));
+        const key = d.toLocaleString('default', { month: 'short', year: '2-digit' });
+        return buckets[key]?.revenue || 0;
+      });
+      const avgGrowth = historicalPoints.length > 1 
+        ? historicalPoints.reduce((acc, val, i, arr) => i > 0 ? acc + (val - arr[i-1]) : acc, 0) / (historicalPoints.length - 1)
+        : 0;
+
       return Array.from({ length: 7 }, (_, i) => {
         const d = new Date();
         d.setMonth(d.getMonth() - (6 - i));
         const key = d.toLocaleString('default', { month: 'short', year: '2-digit' });
+        const revenue = buckets[key]?.revenue || 0;
+        
+        // Accurate projection: if it's the current month or future, apply trend
+        const isCurrentMonth = i === 6;
+        const projectionValue = isCurrentMonth 
+          ? Math.max(0, (historicalPoints[historicalPoints.length-1] || 0) + avgGrowth)
+          : revenue * 1.02; // Baseline variance
+
         return {
           name: d.toLocaleString('default', { month: 'short' }),
-          revenue: buckets[key]?.revenue || 0,
+          revenue: revenue,
           expenses: buckets[key]?.expenses || 0,
-          projection: Math.round((buckets[key]?.revenue || 0) * 1.08)
+          projection: Math.round(projectionValue)
         };
       });
     })();
@@ -2250,7 +2524,7 @@ export default function App() {
                       trend: momRev.pct,
                       color: momRev.up ? 'text-emerald-500' : 'text-rose-500',
                       bg: momRev.up ? 'bg-emerald-500/10' : 'bg-rose-500/10',
-                      barWidth: ((totalRevenue/(totalRevenue+totalExpenses||1)*100).toFixed(0)+'%')
+                      barWidth: Math.min(totalRevenue/(totalRevenue+totalExpenses||1)*100,100).toFixed(0)+'%'
                     },
                     { 
                       label: 'Total Expenses', 
@@ -2260,7 +2534,7 @@ export default function App() {
                       trend: momExp.pct,
                       color: momExp.up ? 'text-rose-500' : 'text-emerald-500', 
                       bg: momExp.up ? 'bg-rose-500/10' : 'bg-emerald-500/10',
-                      barWidth: ((totalExpenses/(totalRevenue+totalExpenses||1)*100).toFixed(0)+'%')
+                      barWidth: Math.min(totalExpenses/(totalRevenue+totalExpenses||1)*100,100).toFixed(0)+'%'
                     },
                     { 
                       label: 'Net Profit', 
@@ -2279,10 +2553,11 @@ export default function App() {
                       sub: 'Projected Liquidity Window', 
                       icon: <TrendingUp className="w-5 h-5" />,
                       trend: runwayStatus.label,
+                      className: runwayStatus.color,
                       color: runwayStatus.color,
                       bg: runwayStatus.color.replace('text-', 'bg-') + '/10',
-                      barWidth: Math.min(100, (runwayFixed / 12) * 100).toFixed(0) + '%',
-                      barColor: 'bg-emerald-500'
+                      barWidth: Math.min(runwayFixed / 24 * 100, 100).toFixed(0) + '%',
+                      barColor: runwayStatus.label === 'Healthy' ? 'bg-emerald-500' : runwayStatus.label === 'Warning' ? 'bg-amber-500' : 'bg-rose-500'
                     },
                   ].map((stat: any, i) => (
                     <motion.div 
@@ -2345,6 +2620,7 @@ export default function App() {
                         <AreaChart 
                           data={revenueChartData}
                           margin={{ top: 20, right: 20, left: -20, bottom: 0 }}
+                          onClick={() => handleChartDrillDown()}
                         >
                           <defs>
                             <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
@@ -2427,54 +2703,24 @@ export default function App() {
                   {/* Operational Distribution (Bar to Doughnut Rebuild) */}
                   <div className={`p-8 rounded-[2.5rem] ${isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200 shadow-xl'} border flex flex-col transition-all hover:border-[#C28E4A]/20`}>
                     <h3 className="font-bold text-gray-400 uppercase tracking-widest text-[10px] mb-8">Segmented Treasury Distribution</h3>
-                    <div className="flex-1 relative flex items-center justify-center">
-                       <ResponsiveContainer width="100%" height={280}>
-                          <RechartsPieChart>
-                             <Pie
-                                data={getExpenseBreakdown().map(e => ({ name: e.name, value: e.value }))}
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={70}
-                                outerRadius={90}
-                                paddingAngle={5}
-                                dataKey="value"
-                                stroke="none"
-                             >
-                                {getExpenseBreakdown().map((_, i) => (
-                                   <Cell key={i} fill={['#C28E4A', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'][i % 5]} />
-                                ))}
-                             </Pie>
+                    <div className="flex-1 relative flex items-center justify-center min-h-[300px]">
+                       <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={getExpenseBreakdown().map(e => ({ name: e.name, value: e.value }))}>
+                             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 9, fontWeight: 700, fill: '#666'}} />
+                             <YAxis hide />
                              <RechartsTooltip 
+                                cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                                 formatter={(val: any) => formatCurrency(Number(val))}
-                                content={({ active, payload }) => {
-                                   if (active && payload && payload.length) {
-                                      return (
-                                         <div className="bg-black/90 p-3 rounded-2xl border border-white/10 shadow-2xl">
-                                            <p className="text-[10px] font-bold text-white uppercase tracking-widest">{payload[0].name}</p>
-                                            <p className="text-sm font-bold text-[#C28E4A]">{formatCurrency(Number(payload[0].value))}</p>
-                                         </div>
-                                      );
-                                   }
-                                   return null;
-                                }}
                              />
-                          </RechartsPieChart>
+                          <Bar 
+                             dataKey="value" 
+                             fill="#C28E4A" 
+                             radius={[5, 5, 0, 0]} 
+                             onClick={(data) => data && handleChartDrillDown(data.name)}
+                             className="cursor-pointer"
+                          />
+                          </BarChart>
                        </ResponsiveContainer>
-                       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                          <p className="text-[9px] text-gray-500 font-bold uppercase tracking-[0.2em]">Total OpEx</p>
-                          <p className={`text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{formatCurrency(totalExpenses)}</p>
-                       </div>
-                    </div>
-                    <div className="mt-8 space-y-3">
-                       {getExpenseBreakdown().slice(0, 4).map((item, i) => (
-                          <div key={i} className="flex justify-between items-center">
-                             <div className="flex items-center gap-2">
-                                <div className={`w-1.5 h-1.5 rounded-full ${['bg-[#C28E4A]', 'bg-[#10b981]', 'bg-[#f59e0b]', 'bg-[#ef4444]'][i]}`}></div>
-                                <span className="text-[10px] font-bold text-gray-500 uppercase">{item.name}</span>
-                             </div>
-                             <span className="text-xs font-bold">{formatCurrency(item.value)}</span>
-                          </div>
-                       ))}
                     </div>
                   </div>
                 </div>
@@ -2490,32 +2736,23 @@ export default function App() {
                       </button>
                     </div>
                     <div className="space-y-1">
-                      {transactions.slice(0, 5).map((tr, i) => (
-                        <div key={i} className="flex items-center justify-between p-3 rounded-2xl hover:bg-white/[0.02] transition-all group border-b border-white/[0.03]">
-                           <div className="flex items-center gap-4">
-                              <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold ${tr.type === 'income' ? 'text-emerald-500 bg-emerald-500/10' : 'text-rose-500 bg-rose-500/10'}`}>
-                                 {tr.type === 'income' ? '+' : '-'}
-                              </div>
-                              <div>
-                                 <p className="text-xs font-bold line-clamp-1">{tr.merchant}</p>
-                                 <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">{tr.cat} · {tr.date}</p>
-                              </div>
-                           </div>
-                           <div className="text-right">
-                              <p className={`text-xs font-bold ${tr.type === 'income' ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                 {tr.type === 'income' ? '+' : '-'}{formatCurrency(Math.abs(tr.amt))}
-                              </p>
-                              <span className={`text-[8px] px-1.5 py-0.5 rounded font-black uppercase ${
-                                tr.status === 'Reconciled' ? 'bg-emerald-500/10 text-emerald-500' : 
-                                tr.status === 'Pending' ? 'bg-amber-500/10 text-amber-500' : 'bg-rose-500/10 text-rose-500'
-                              }`}>
-                                {tr.status}
-                              </span>
-                           </div>
+                      {transactions.slice(0, 5).map(t => (
+                        <div key={t.id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'0.5px solid var(--border)'}}>
+                          <div style={{width:8,height:8,borderRadius:'50%',flexShrink:0,background: t.type==='income' ? 'var(--pos)' : 'var(--neg)'}} />
+                          <div style={{flex:1}}>
+                            <p style={{fontSize:12,fontWeight:500,color:'var(--text-primary)'}}>{t.merchant}</p>
+                            <p style={{fontSize:10,color:'var(--text-muted)'}}>{t.cat} · {t.date}</p>
+                          </div>
+                          <span style={{fontSize:12,fontWeight:500,color: t.type==='income' ? 'var(--pos)' : 'var(--neg)'}}>
+                            {t.type==='income' ? '+' : '-'}{formatCurrency(Math.abs(t.amt))}
+                          </span>
+                          <span style={{fontSize:9,padding:'2px 5px',borderRadius:3,background: t.status==='Reconciled' ? 'var(--posb)' : t.status==='Pending' ? 'var(--warnb)' : 'var(--negb)', color: t.status==='Reconciled' ? 'var(--pos)' : t.status==='Pending' ? 'var(--warn)' : 'var(--neg)'}}>
+                            {t.status}
+                          </span>
                         </div>
                       ))}
                       <button onClick={() => setView('transactions')} className="w-full mt-4 text-[10px] font-bold text-[#C28E4A] hover:underline uppercase tracking-widest flex items-center justify-center gap-2">
-                        View Ledger <ArrowRight className="w-3 h-3" />
+                        View all →
                       </button>
                     </div>
                   </div>
@@ -2530,15 +2767,14 @@ export default function App() {
                        <ResponsiveContainer width="100%" height="100%">
                           <BarChart data={getTransactionHistogram()}>
                              <XAxis dataKey="range" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 700, fill: '#666' }} />
-                             <RechartsTooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} formatter={(val: any) => val + ' transactions'} content={({ active, payload }) => {
-                                if (active && payload && payload.length) return <div className="bg-black/90 p-2 rounded-xl border border-white/10 text-[10px] text-white font-bold">{payload[0].value} Transactions</div>;
-                                return null;
-                             }} />
+                             <RechartsTooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} formatter={(val: any) => val + ' transactions'} />
                              <Bar 
                                 dataKey="count" 
                                 fill="#C28E4A" 
                                 radius={[5, 5, 0, 0]} 
                                 label={{ position: 'top', fontSize: 9, fill: isDark ? '#999' : '#666' }}
+                                onClick={() => handleChartDrillDown()}
+                                className="cursor-pointer"
                              />
                           </BarChart>
                        </ResponsiveContainer>
@@ -2667,32 +2903,32 @@ export default function App() {
                        )}
                        {[
                          { 
-                           title: runway < 3 ? 'Cash runway critical' : runway < 6 ? 'Runway below 6 months' : 'Cash position healthy', 
-                           val: runway < 3 ? 'Critical' : runway < 6 ? 'Warning' : 'Healthy', 
-                           desc: 'Runway: '+runwayFixed.toFixed(1)+' months at '+formatCurrency(monthlyBurn)+'/mo burn', 
+                           title: runwayStatus.label === 'Critical' ? 'Cash runway critical' : runwayStatus.label === 'Warning' ? 'Runway below 6 months' : 'Cash position healthy', 
+                           val: runwayStatus.label, 
+                           desc: `Current runway: ${runwayFixed.toFixed(1)} months at ${formatCurrency(monthlyBurn)}/mo burn rate.`, 
                            icon: <ShieldCheck className="w-4 h-4" />, 
                            action: () => setView('cashflow'),
                            color: runway < 3 ? 'text-rose-500' : runway < 6 ? 'text-amber-500' : 'text-emerald-500',
                            bg: runway < 3 ? 'bg-rose-500/10' : runway < 6 ? 'bg-amber-500/10' : 'bg-emerald-500/10'
                          },
                          { 
-                           title: overdueInvoices.length > 0 ? overdueInvoices.length+' invoice(s) overdue' : 'All invoices current', 
+                           title: overdueInvoices.length > 0 ? overdueInvoices.length+' invoice'+(overdueInvoices.length>1?'s':'')+' overdue' : 'All invoices current', 
                            val: overdueInvoices.length > 0 ? 'Urgent' : 'Healthy', 
-                           desc: overdueInvoices.length > 0 ? 'Total: '+formatCurrency(overdueInvoices.reduce((s,i)=>s+i.amt,0))+'. Client: '+overdueInvoices.sort((a,b)=>new Date(a.dueDate).getTime()-new Date(b.dueDate).getTime())[0]?.client : 'No overdue receivables', 
+                           desc: overdueInvoices.length > 0 ? 'Total outstanding: '+formatCurrency(overdueInvoices.reduce((s,i)=>s+i.amt,0))+'. Oldest client: '+overdueInvoices.sort((a,b)=>new Date(a.dueDate).getTime()-new Date(b.dueDate).getTime())[0]?.client : 'No overdue receivables.', 
                            icon: <AlertCircle className="w-4 h-4" />, 
                            action: () => setView('invoices'),
                            color: overdueInvoices.length > 0 ? 'text-rose-500' : 'text-emerald-500',
                            bg: overdueInvoices.length > 0 ? 'bg-rose-500/10' : 'bg-emerald-500/10'
                          },
-                         { 
-                           title: momExp.up ? 'Expenses up '+momExp.pct+' this month' : 'Expenses down '+momExp.pct, 
-                           val: 'Spend Alert', 
-                           desc: 'Top category: '+(getExpenseBreakdown().sort((a,b)=>b.value-a.value)[0]?.name || 'N/A')+' at '+formatCurrency(getExpenseBreakdown().sort((a,b)=>b.value-a.value)[0]?.value||0), 
-                           icon: <Zap className="w-4 h-4" />,
+                          { 
+                            title: momExp.up ? `Expenses up ${momExp.pct} this month` : `Expenses down ${momExp.pct} this month`, 
+                            val: 'Spend Alert', 
+                            desc: `Top category: ${getExpenseBreakdown().sort((a, b) => b.value - a.value)[0]?.name || 'N/A'} at ${formatCurrency(getExpenseBreakdown().sort((a, b) => b.value - a.value)[0]?.value || 0)}`, 
+                            icon: <Zap className="w-4 h-4" />,
                             action: () => setView('transactions'),
-                           color: 'text-[#C28E4A]',
-                           bg: 'bg-[#C28E4A]/10'
-                         },
+                            color: 'text-[#C28E4A]',
+                            bg: 'bg-[#C28E4A]/10'
+                          },
                        ].map((insight, i) => (
                          <div 
                             key={i} 
@@ -2892,15 +3128,22 @@ export default function App() {
                     <div className="space-y-4">
                       {[
                         { label: 'Operating Revenue', val: reportTotalRevenue, type: 'primary' },
-                        { label: 'Cost of Capital', val: reportTotalRevenue * 0.12, type: 'sub' },
-                        { label: 'Gross Margin', val: reportTotalRevenue * 0.88, type: 'total' },
+                        { label: 'Cost of Revenue', val: reportTotalRevenue * 0.15, type: 'sub' },
+                        { label: 'Gross Margin', val: reportTotalRevenue * 0.85, type: 'total', pct: 85 },
                         { label: 'Total Operating Expenses', val: reportTotalExpenses, type: 'primary' },
-                        { label: 'Net Operating Income', val: reportNetProfit, type: 'final' }
+                        { label: 'Operating Income / EBITDA', val: reportNetProfit, type: 'final', pct: (reportNetProfit / (reportTotalRevenue || 1)) * 100 }
                       ].map((row, i) => (
                         <div key={i} className={`flex justify-between items-center py-3 ${row.type === 'total' || row.type === 'final' ? 'border-t border-neutral-100 dark:border-white/5 mt-4 pt-6' : ''}`}>
-                          <span className={`text-xs uppercase font-bold tracking-widest ${row.type === 'final' ? 'text-[#C28E4A]' : 'text-neutral-500'}`}>
-                            {row.label}
-                          </span>
+                          <div className="flex flex-col">
+                            <span className={`text-xs uppercase font-black tracking-widest ${row.type === 'final' ? 'text-[#C28E4A]' : 'text-neutral-500'}`}>
+                              {row.label}
+                            </span>
+                            {row.pct !== undefined && (
+                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                                Margin: {row.pct.toFixed(1)}%
+                              </span>
+                            )}
+                          </div>
                           <span className={`text-lg font-bold ${row.type === 'final' ? 'text-2xl font-serif italic' : ''} ${isDark ? 'text-white' : 'text-slate-900'}`}>
                             {formatCurrency(row.val)}
                           </span>
@@ -2910,24 +3153,53 @@ export default function App() {
                   </div>
 
                   <div className={`p-8 rounded-[2.5rem] border ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-white border-slate-200'}`}>
-                    <h3 className={`text-xl font-bold mb-8 ${isDark ? 'text-white' : 'text-slate-900'}`}>Expense Verticalization</h3>
-                    <div className="space-y-6">
-                      {getExpenseBreakdown(reportFilteredTransactions).slice(0, 5).map((cat, i) => (
-                        <div key={i} className="space-y-2">
-                          <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-neutral-400">
-                            <span>{cat.name}</span>
-                            <span>{((cat.value / (reportTotalExpenses || 1)) * 100).toFixed(1)}%</span>
-                          </div>
-                          <div className="h-10 w-full bg-neutral-100 dark:bg-white/5 rounded-2xl overflow-hidden flex items-center px-4">
-                             <span className={`text-sm font-bold absolute ${isDark ? 'text-white' : 'text-slate-900'}`}>{formatCurrency(cat.value)}</span>
-                             <motion.div 
-                               initial={{ width: 0 }}
-                               animate={{ width: `${(cat.value / (reportTotalExpenses || 1)) * 100}%` }}
-                               className="h-full bg-[#C28E4A]/20"
-                             />
-                          </div>
-                        </div>
-                      ))}
+                    <div className="flex justify-between items-center mb-8">
+                       <h3 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Financial Bridge (Waterfall)</h3>
+                       <button className="text-[10px] font-bold text-[#C28E4A] uppercase tracking-widest hover:underline">Strategic Drift Analysis</button>
+                    </div>
+                    <div className="h-[340px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={waterfallData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+                          <XAxis 
+                             dataKey="name" 
+                             axisLine={false} 
+                             tickLine={false} 
+                             tick={{ fontSize: 10, fontWeight: 800, fill: '#888' }} 
+                          />
+                          <YAxis hide />
+                          <RechartsTooltip 
+                             cursor={{ fill: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}
+                             content={({ active, payload }) => {
+                               if (active && payload && payload.length) {
+                                  const data = payload[0].payload;
+                                  return (
+                                    <div className="p-4 rounded-2xl border shadow-2xl backdrop-blur-xl" style={{ background: isDark ? '#111' : '#fff', borderColor: 'var(--color-border)' }}>
+                                       <p className="text-[10px] font-black uppercase text-gray-500 mb-1">{data.name}</p>
+                                       <p className={`text-lg font-bold ${data.value >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                          {formatCurrency(data.value)}
+                                       </p>
+                                    </div>
+                                  );
+                               }
+                               return null;
+                             }}
+                          />
+                          <Bar dataKey="base" stackId="a" fill="transparent" />
+                          <Bar 
+                             dataKey="top" 
+                             stackId="a" 
+                             radius={[8, 8, 8, 8]}
+                             onClick={(data) => {
+                               if (data && data.name) handleChartDrillDown(data.name === 'OpEx' ? undefined : data.name);
+                             }}
+                             className="cursor-pointer"
+                          >
+                            {waterfallData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.fill} fillOpacity={0.8} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
                     </div>
                   </div>
                 </div>
@@ -2963,18 +3235,73 @@ export default function App() {
                   </div>
 
                   <div className={`p-8 rounded-[2.5rem] border ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-white border-slate-200'}`}>
+                    <div className="flex items-center justify-between mb-8">
+                       <div className="flex items-center gap-3">
+                          <Bot className="w-5 h-5 text-[#C28E4A]" />
+                          <h3 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Executive Synthesis</h3>
+                       </div>
+                       <button 
+                         onClick={handleGeminiNarrative}
+                         disabled={isGeneratingReport}
+                         className="text-[10px] font-bold text-[#C28E4A] hover:underline uppercase tracking-widest flex items-center gap-2"
+                       >
+                         {isGeneratingReport ? 'Synthesizing...' : 'Re-generate Memo'} <RefreshCw className={`w-3 h-3 ${isGeneratingReport ? 'animate-spin' : ''}`} />
+                       </button>
+                    </div>
+                    {reportNarrative ? (
+                      <div className={`prose prose-sm max-w-none ${isDark ? 'prose-invert' : 'prose-neutral'} opacity-90`}>
+                        <div className="bg-[#C28E4A]/5 p-8 rounded-3xl border border-[#C28E4A]/10">
+                           <div className="flex items-center gap-4 mb-6 pb-6 border-b border-[#C28E4A]/10">
+                              <div className="w-12 h-12 rounded-2xl bg-[#C28E4A] flex items-center justify-center text-white shadow-lg">
+                                 <FileText className="w-6 h-6" />
+                              </div>
+                              <div>
+                                 <p className="text-[10px] font-black uppercase tracking-widest text-[#C28E4A]">Lumina AI Financial Intelligence</p>
+                                 <h4 className="text-lg font-bold">CFO Strategic Memorandum</h4>
+                              </div>
+                           </div>
+                           <div className="text-xs leading-relaxed whitespace-pre-wrap font-medium">
+                              {reportNarrative}
+                           </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="py-20 text-center space-y-4">
+                        <div className="w-16 h-16 rounded-full bg-[#C28E4A]/10 flex items-center justify-center mx-auto mb-4">
+                          <Sparkles className="w-8 h-8 text-[#C28E4A]" />
+                        </div>
+                        <p className="text-sm font-medium text-gray-500">Run a full audit to generate your CFO Strategic Memorandum.</p>
+                        <button 
+                          onClick={handleGeminiNarrative}
+                          className="px-6 py-2.5 rounded-xl bg-[#C28E4A] text-white text-[10px] font-bold uppercase tracking-widest"
+                        >
+                          Generate Narrative
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className={`p-8 rounded-[2.5rem] border ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-white border-slate-200'}`}>
                     <div className="flex items-center gap-3 mb-8">
                        <Sparkles className="w-5 h-5 text-[#C28E4A]" />
-                       <h3 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>AI Strategy Memo</h3>
+                       <h3 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Strategic Recommendations</h3>
                     </div>
                     <div className="space-y-6">
-                      {aiInsights.slice(0, 3).map((insight, i) => (
-                        <div key={i} className={`p-6 rounded-3xl border border-dashed ${isDark ? 'border-white/10 hover:border-[#C28E4A]/30' : 'border-slate-200 hover:border-[#C28E4A]/30'} transition-all`}>
+                      {aiInsights.map((insight, i) => (
+                        <div key={i} className={`p-6 rounded-3xl border border-dashed ${isDark ? 'border-white/10 hover:border-[#C28E4A]/30' : 'border-slate-200 hover:border-[#C28E4A]/30'} transition-all group`}>
                           <div className="flex items-center justify-between mb-3">
-                            <span className={`text-[10px] font-black uppercase tracking-widest ${insight.priority === 'High' ? 'text-rose-500' : 'text-[#C28E4A]'}`}>{insight.priority} Priority</span>
+                            <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md ${
+                              insight.priority === 'High' ? 'bg-rose-500/10 text-rose-500' : 
+                              insight.priority === 'Medium' ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'
+                            }`}>{insight.priority} Priority</span>
                           </div>
-                          <h4 className={`text-sm font-bold mb-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>{insight.title}</h4>
-                          <p className="text-xs text-neutral-500 leading-relaxed font-medium">{insight.impact}</p>
+                          <h4 className={`text-sm font-bold mb-2 group-hover:text-[#C28E4A] transition-colors ${isDark ? 'text-white' : 'text-slate-900'}`}>{insight.title}</h4>
+                          <p className="text-xs text-neutral-500 leading-relaxed font-medium mb-3">{insight.impact}</p>
+                          <div className="pt-3 border-t border-dashed border-white/5 flex items-center gap-2">
+                             <div className="w-1.5 h-1.5 rounded-full bg-[#C28E4A]" />
+                             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Recommended Action:</span>
+                             <span className="text-[10px] font-bold text-[#C28E4A]">{insight.action}</span>
+                          </div>
                         </div>
                       ))}
                       {aiInsights.length === 0 && <p className="text-xs text-neutral-500 italic py-12 text-center">Hit 'Generate' to synthesize strategic insights.</p>}
@@ -5191,7 +5518,7 @@ export default function App() {
             <a href="#services" className="hover:text-[var(--color-text-primary)] transition-colors">Services</a>
             <a href="#workflow" className="hover:text-[var(--color-text-primary)] transition-colors">Workflow</a>
             <a href="#about" className="hover:text-[var(--color-text-primary)] transition-colors">About</a>
-            <a href="#pricing" className="hover:text-[var(--color-text-primary)] transition-colors">Pricing</a>
+            <button onClick={() => setView('pricing')} className="hover:text-[var(--color-text-primary)] transition-colors">Pricing</button>
             <a href="#faq" className="hover:text-[var(--color-text-primary)] transition-colors">FAQ</a>
           </div>
 
@@ -5258,14 +5585,15 @@ export default function App() {
                   { label: 'Services', id: 'services' },
                   { label: 'Workflow', id: 'workflow' },
                   { label: 'About', id: 'about' },
-                  { label: 'Pricing', id: 'pricing' },
+                  { label: 'Pricing', onClick: () => setView('pricing') },
                   { label: 'FAQ', id: 'faq' }
                 ].map((link) => (
                   <button 
-                    key={link.id}
+                    key={link.label}
                     onClick={() => {
                       setMenuOpen(false);
-                      document.getElementById(link.id)?.scrollIntoView({ behavior: 'smooth' });
+                      if (link.onClick) link.onClick();
+                      else if (link.id) document.getElementById(link.id)?.scrollIntoView({ behavior: 'smooth' });
                     }}
                     className="text-left text-2xl font-serif italic transition-colors"
                     style={{ color: 'var(--color-text-secondary)' }}
@@ -5295,7 +5623,102 @@ export default function App() {
       </AnimatePresence>
 
       <main className="pt-32">
-        {/* Hero Section */}
+        {view === 'pricing' ? (
+          <section id="pricing" className="py-20 px-6 lg:px-12 min-h-[70vh] flex flex-col items-center justify-center">
+            <div className="max-w-[1400px] mx-auto w-full">
+              <div className="flex justify-center mb-12">
+                <button 
+                  onClick={() => setView('landing')}
+                  className="flex items-center gap-2 px-6 py-2 rounded-full border border-white/10 text-xs font-bold uppercase tracking-widest text-gray-400 hover:bg-white/5 transition-all"
+                >
+                  <ArrowLeft className="w-4 h-4" /> Back to Landing
+                </button>
+              </div>
+              <div className="text-center mb-24">
+                <h2 className="text-5xl md:text-7xl font-serif italic mb-8" style={{ color: 'var(--color-text-primary)' }}>Scale with clarity.</h2>
+                <p className="max-w-xl mx-auto text-lg font-light" style={{ color: 'var(--color-text-secondary)' }}>Pricing architecture built for sustainable institutional growth.</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 px-2">
+                {PRICING_TIERS.map((tier, i) => (
+                  <PricingTier key={i} tier={tier} isDark={isDark} handleLogin={handleLogin} />
+                ))}
+              </div>
+            </div>
+          </section>
+        ) : view === 'privacy' || view === 'terms' ? (
+          <section className="py-20 px-6 lg:px-12 min-h-[70vh]">
+            <div className="max-w-3xl mx-auto">
+              <button 
+                onClick={() => setView('landing')}
+                className="flex items-center gap-2 px-6 py-2 rounded-full border border-white/10 text-xs font-bold uppercase tracking-widest text-gray-400 hover:bg-white/5 transition-all mb-12"
+              >
+                <ArrowLeft className="w-4 h-4" /> Back to Landing
+              </button>
+              <div className="markdown-body text-left prose prose-invert max-w-none">
+                <Markdown>{view === 'privacy' ? PRIVACY_POLICY : TERMS_OF_SERVICE}</Markdown>
+              </div>
+            </div>
+          </section>
+        ) : view === 'blog' ? (
+          <section className="py-20 px-6 lg:px-12 min-h-[70vh]">
+            <div className="max-w-5xl mx-auto">
+              <button 
+                onClick={() => setView('landing')}
+                className="flex items-center gap-2 px-6 py-2 rounded-full border border-white/10 text-xs font-bold uppercase tracking-widest text-gray-400 hover:bg-white/5 transition-all mb-12"
+              >
+                <ArrowLeft className="w-4 h-4" /> Back to Landing
+              </button>
+              <div className="text-center mb-24">
+                <h2 className="text-5xl md:text-7xl font-serif italic mb-8" style={{ color: 'var(--color-text-primary)' }}>The Intel Feed.</h2>
+                <p className="max-w-xl mx-auto text-lg font-light" style={{ color: 'var(--color-text-secondary)' }}>Deep dives into the intersection of capital and intelligence.</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {BLOG_POSTS.map(post => (
+                  <motion.div 
+                    key={post.id}
+                    whileHover={{ y: -5 }}
+                    className="p-8 rounded-[40px] border flex flex-col items-start text-left group cursor-pointer"
+                    style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}
+                    onClick={() => {
+                      setSelectedBlogId(post.id);
+                      setView('blog-post');
+                    }}
+                  >
+                    <div className="text-[10px] uppercase font-black tracking-widest text-[#C28E4A] mb-4">{post.date} • {post.author}</div>
+                    <h3 className="text-3xl font-serif italic mb-4 group-hover:text-[#C28E4A] transition-colors">{post.title}</h3>
+                    <p className="text-sm font-light leading-relaxed mb-8" style={{ color: 'var(--color-text-secondary)' }}>{post.excerpt}</p>
+                    <div className="mt-auto flex items-center gap-2 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-primary)' }}>
+                      Read Analysis <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </section>
+        ) : view === 'blog-post' ? (
+          <section className="py-20 px-6 lg:px-12 min-h-[70vh]">
+            <div className="max-w-3xl mx-auto">
+              <button 
+                onClick={() => setView('blog')}
+                className="flex items-center gap-2 px-6 py-2 rounded-full border border-white/10 text-xs font-bold uppercase tracking-widest text-gray-400 hover:bg-white/5 transition-all mb-12"
+              >
+                <ArrowLeft className="w-4 h-4" /> Back to Blog
+              </button>
+              {BLOG_POSTS.find(p => p.id === selectedBlogId) && (
+                <div>
+                   <div className="text-[10px] uppercase font-black tracking-widest text-[#C28E4A] mb-4">
+                      {BLOG_POSTS.find(p => p.id === selectedBlogId)?.date} • By {BLOG_POSTS.find(p => p.id === selectedBlogId)?.author}
+                   </div>
+                   <div className="markdown-body text-left prose prose-invert max-w-none">
+                      <Markdown>{BLOG_POSTS.find(p => p.id === selectedBlogId)?.content}</Markdown>
+                   </div>
+                </div>
+              )}
+            </div>
+          </section>
+        ) : (
+          <>
+            {/* Hero Section */}
         <section className="relative px-6 lg:px-12 text-center flex flex-col items-center">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[400px] blur-[120px] rounded-full pointer-events-none -z-10" style={{ background: 'var(--color-brand-transparent)' }}></div>
           
@@ -5663,60 +6086,14 @@ export default function App() {
 
         {/* Pricing Section */}
         <section id="pricing" className="py-40 px-6 lg:px-12 border-t" style={{ borderColor: 'var(--color-border)' }}>
-          <div className="max-w-7xl mx-auto">
+          <div className="max-w-[1400px] mx-auto">
             <div className="text-center mb-24">
-              <h2 className="text-6xl font-serif italic mb-6" style={{ color: 'var(--color-text-primary)' }}>Designed for scale.</h2>
-              <p className="max-w-xl mx-auto" style={{ color: 'var(--color-text-secondary)' }}>Flexible pricing tiers that grow with your organizational complexity.</p>
+              <h2 className="text-5xl md:text-7xl font-serif italic mb-8" style={{ color: 'var(--color-text-primary)' }}>Scale with clarity.</h2>
+              <p className="max-w-xl mx-auto text-lg font-light" style={{ color: 'var(--color-text-secondary)' }}>Pricing architecture built for sustainable institutional growth.</p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {PRICING.map((tier, i) => (
-                <motion.div 
-                  key={i} 
-                  initial={{ opacity: 0, y: 40 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.7, delay: i * 0.1 }}
-                  className={`p-10 rounded-[40px] border transition-all duration-500 relative flex flex-col ${
-                    tier.highlight 
-                      ? "shadow-2xl"
-                      : "shadow-sm hover:shadow-md"
-                  }`}
-                  style={{
-                    background: 'var(--color-bg-primary)',
-                    borderColor: tier.highlight ? 'var(--color-brand)' : 'var(--color-border)',
-                  }}
-                >
-                  {tier.highlight && (
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 text-white text-[10px] font-bold uppercase tracking-widest rounded-full" style={{ background: 'var(--color-brand)' }}>
-                      Most Popular
-                    </div>
-                  )}
-                  <div className="mb-12 text-left">
-                    <h3 className="text-xl font-bold mb-4" style={{ color: 'var(--color-text-primary)' }}>{tier.name}</h3>
-                    <div className="flex items-end gap-1 mb-4">
-                      <span className="text-5xl font-bold tracking-tighter" style={{ color: 'var(--color-text-primary)' }}>{tier.price}</span>
-                      <span className="text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-tertiary)' }}>{tier.period}</span>
-                    </div>
-                    <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-tertiary)' }}>{tier.desc}</p>
-                  </div>
-                  <div className="space-y-4 mb-12 flex-1 text-left">
-                    {tier.features.map((feature, idx) => (
-                      <div key={idx} className="flex items-center gap-3">
-                        <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: 'var(--color-bg-secondary)' }}>
-                          <Check className="w-3 h-3" style={{ color: 'var(--color-brand)' }} />
-                        </div>
-                        <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>{feature}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <button 
-                    onClick={handleLogin}
-                    className="w-full py-4 rounded-full font-bold text-sm transition-all"
-                    style={{ background: tier.highlight ? 'var(--color-brand)' : 'var(--color-bg-secondary)', color: tier.highlight ? '#fff' : 'var(--color-text-primary)' }}
-                  >
-                    {tier.name === 'Enterprise' ? 'Contact Sales' : 'Start Trial'}
-                  </button>
-                </motion.div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 px-2">
+              {PRICING_TIERS.map((tier, i) => (
+                <PricingTier key={i} tier={tier} isDark={isDark} handleLogin={handleLogin} />
               ))}
             </div>
           </div>
@@ -5763,16 +6140,18 @@ export default function App() {
               <p className="mt-12 text-sm font-medium" style={{ color: 'var(--color-text-tertiary)' }}>No credit card required. 14-day full access trial.</p>
            </div>
         </section>
-      </main>
+      </>
+    )}
+  </main>
 
       <footer className="border-t py-12 px-6 lg:px-12" style={{ background: 'var(--color-bg-primary)', borderColor: 'var(--color-border)' }}>
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8 text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--color-text-tertiary)' }}>
           <div>&copy; 2024 Finance AI Technologies Inc.</div>
           <div className="flex flex-wrap justify-center gap-10">
-            <a href="#" className="transition-all hover:underline underline-offset-4 font-semibold" style={{ color: 'var(--color-text-secondary)' }} onMouseEnter={e => e.currentTarget.style.color = 'var(--color-text-primary)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-secondary)'}>Privacy Policy</a>
-            <a href="#" className="transition-all hover:underline underline-offset-4 font-semibold" style={{ color: 'var(--color-text-secondary)' }} onMouseEnter={e => e.currentTarget.style.color = 'var(--color-text-primary)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-secondary)'}>Terms of Service</a>
-            <a href="#" className="transition-all hover:underline underline-offset-4 font-semibold" style={{ color: 'var(--color-text-secondary)' }} onMouseEnter={e => e.currentTarget.style.color = 'var(--color-text-primary)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-secondary)'}>Security Audit</a>
-            <a href="#" className="transition-all hover:underline underline-offset-4 font-semibold" style={{ color: 'var(--color-text-secondary)' }} onMouseEnter={e => e.currentTarget.style.color = 'var(--color-text-primary)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-secondary)'}>Legal</a>
+            <button onClick={() => setView('privacy')} className="transition-all hover:underline underline-offset-4 font-semibold" style={{ color: 'var(--color-text-secondary)' }}>Privacy Policy</button>
+            <button onClick={() => setView('terms')} className="transition-all hover:underline underline-offset-4 font-semibold" style={{ color: 'var(--color-text-secondary)' }}>Terms of Service</button>
+            <button onClick={() => setView('blog')} className="transition-all hover:underline underline-offset-4 font-semibold" style={{ color: 'var(--color-text-secondary)' }}>Blog</button>
+            <a href="#" className="transition-all hover:underline underline-offset-4 font-semibold" style={{ color: 'var(--color-text-secondary)' }}>Security Audit</a>
           </div>
           <div className="flex gap-4">
              <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> All Systems Operational</span>
