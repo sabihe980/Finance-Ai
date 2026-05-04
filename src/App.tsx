@@ -73,7 +73,7 @@ import {
   PieChart as RechartsPieChart,
   Pie
 } from "recharts";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI, Type } from "@google/genai";
 import * as XLSX from "xlsx";
 import { ThreeBackground } from "./components/ThreeBackground";
 
@@ -492,7 +492,7 @@ const FAQS = [
   }
 ];
 
-const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 export default function App() {
   const [view, setView] = useState<'landing' | 'onboarding' | 'dashboard' | 'transactions' | 'reports' | 'settings' | 'invoices' | 'cashflow' | 'pricing' | 'privacy' | 'terms' | 'blog' | 'blog-post'>('landing');
@@ -581,46 +581,70 @@ export default function App() {
   const [reportNarrative, setReportNarrative] = useState<string | null>(null);
 
   const generateAIInsights = async () => {
+    // Determine top category
+    const counts: Record<string, number> = {};
+    reportFilteredTransactions.forEach(t => {
+      counts[t.cat] = (counts[t.cat] || 0) + Math.abs(t.amt);
+    });
+    const topCat = Object.entries(counts).sort(([,a], [,b]) => b - a)[0]?.[0] || 'N/A';
+
+    setToast('Initiating Professional Audit Sequence...');
+    
+    // Trigger both analysis flows
+    await Promise.all([
+      handleGeminiNarrative(),
+      generateStrategicRecommendations()
+    ]);
+    
+    setLastReportSummary({
+      generatedAt: new Date(),
+      dateRange: `${reportConfig.startDate} — ${reportConfig.endDate}`,
+      netProfit: reportNetProfit,
+      totalRevenue: reportTotalRevenue,
+      topCategory: topCat
+    });
+  };
+
+  const generateStrategicRecommendations = async () => {
     setIsGeneratingReport(true);
     try {
-      const model = ai.getGenerativeModel({ model: "gemini-2.0-flash" });
-      const context = {
-        transactions: reportFilteredTransactions.slice(0, 50),
-        invoices: invoices.slice(0, 50),
-        metrics: {
-          revenue: reportTotalRevenue,
-          expense: reportTotalExpenses,
-          profit: reportNetProfit
-        }
+      const metrics = {
+        totalRevenue: reportTotalRevenue,
+        totalExpenses: reportTotalExpenses,
+        netProfit: reportNetProfit,
+        auditScore: auditScore,
+        grossMarginPct: grossMarginPct,
+        aging,
+        dso,
+        period: `${reportConfig.startDate} to ${reportConfig.endDate}`
       };
 
-      const runwayVal = (availableCapital + outstandingInvoiceTotal) / Math.max(monthlyBurn, 1);
-      const prompt = `Act as an expert financial advisor. Analyze this data: ${JSON.stringify(context)}. 
-      Provide a simple 1-sentence executive summary reflecting the current path and 3 clear, actionable steps to improve profitability or cash flow.
-      Consider the runway of ${runwayVal.toFixed(1)} months and current burn of ${formatCurrency(monthlyBurn)}.
-      Format as JSON:
-      {
-        "summary": "...",
-        "insights": [
-          {"title": "...", "priority": "High/Medium/Low", "action": "Simple step", "impact": "Short description"}
-        ]
-      }`;
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                priority: { type: Type.STRING, enum: ["High", "Medium", "Low"] },
+                title: { type: Type.STRING },
+                impact: { type: Type.STRING },
+                action: { type: Type.STRING }
+              },
+              required: ["priority", "title", "impact", "action"]
+            }
+          }
+        },
+        systemInstruction: "You are a financial advisor. Analyze this financial snapshot and return ONLY a JSON array of recommendations. No markdown, no preamble. Fields: priority, title, impact, action.",
+        contents: `Financial Data: ${JSON.stringify(metrics)}`
+      });
 
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-      const cleanText = text.replace(/```json|```/g, "").trim();
-      const parsed = JSON.parse(cleanText);
-
-      setAiSummary(parsed.summary);
-      setAiInsights(parsed.insights);
-      setToast('Insight Synthesis Complete');
-    } catch (error) {
-      console.error("AI Insight Generation Failed", error);
-      setAiSummary("Data synthesis error. Please check your connection.");
-      setAiInsights([
-        { title: "Review Cash Reserves", priority: "High", action: "Assess current liquidity ratios manually due to sync error.", impact: "Risk mitigation" }
-      ]);
+      const recommendations = JSON.parse(response.text || "[]");
+      setAiInsights(recommendations);
+    } catch (e) {
+      console.error(e);
     } finally {
       setIsGeneratingReport(false);
     }
@@ -629,19 +653,26 @@ export default function App() {
   const handleGeminiNarrative = async () => {
     setIsGeneratingReport(true);
     try {
-      const model = ai.getGenerativeModel({ model: "gemini-2.0-flash" });
-      const prompt = `Generate a high-level CFO executive summary narrative for the period ${reportConfig.startDate} to ${reportConfig.endDate}. 
-      Key metrics: Revenue ${formatCurrency(reportTotalRevenue)}, Expenses ${formatCurrency(reportTotalExpenses)}, Net Profit ${formatCurrency(reportNetProfit)}.
-      Format: CFO Memo style. Sections: 1. Executive Summary, 2. Performance Analysis, 3. Risks & Opportunities, 4. Recommendations.
-      Be professional, analytical, and concise.`;
-      
-      const result = await model.generateContent(prompt);
-      const text = await result.response.text();
-      setReportNarrative(text);
-      setToast('AI Narrative Synthesis Complete');
+      const metrics = {
+        totalRevenue: reportTotalRevenue,
+        totalExpenses: reportTotalExpenses,
+        netProfit: reportNetProfit,
+        auditScore: auditScore,
+        grossMarginPct: grossMarginPct,
+        topClients: topClients.slice(0, 3).map(c => c.name),
+        period: `${reportConfig.startDate} to ${reportConfig.endDate}`
+      };
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        systemInstruction: "You are a CFO-level financial analyst. Write a concise executive memorandum based on the financial data provided. Focus on strategic implications and trend analysis. Use a professional, institutional tone.",
+        contents: `Financial Snapshot: ${JSON.stringify(metrics)}`
+      });
+
+      setReportNarrative(response.text || "Synthesis complete. No anomalies detected.");
     } catch (e) {
       console.error(e);
-      setToast('Failed to generate AI narrative');
+      setToast('Narrative generation failed');
     } finally {
       setIsGeneratingReport(false);
     }
@@ -727,12 +758,18 @@ export default function App() {
     });
   }, []);
   const [reportConfig, setReportConfig] = useState({
-    dateRange: 'quarterly',
+    dateRange: 'This Quarter',
     startDate: '2024-07-01',
     endDate: '2024-09-30',
     frequency: 'monthly',
-    includeAccounts: ['Sales', 'Infrastructure', 'Payroll', 'Marketing'],
+    includeAccounts: [],
   });
+
+  // Sync general filters with reportConfig
+  useEffect(() => {
+    setFilterDateStart(reportConfig.startDate);
+    setFilterDateEnd(reportConfig.endDate);
+  }, [reportConfig.startDate, reportConfig.endDate]);
   const [scenarioInput, setScenarioInput] = useState({ hired: 0, newRevenue: 0, salaryPerHead: 15000 });
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [taxRates, setTaxRates] = useState([{ name: 'GST', rate: 0.17 }]);
@@ -1062,6 +1099,41 @@ export default function App() {
     .filter(i => i.status === 'Paid' && i.date.startsWith(new Date().toISOString().substring(0, 7)))
     .reduce((s, i) => s + i.amt, 0);
 
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    const primaryColor = "#C28E4A";
+    
+    doc.setFillColor(30, 41, 59);
+    doc.rect(0, 0, 210, 40, "F");
+    
+    doc.setFontSize(22);
+    doc.setTextColor(255);
+    doc.text("AI FINANCIAL PERFORMANCE REPORT", 20, 25);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(primaryColor);
+    doc.text(`PERIOD: ${reportConfig.startDate} - ${reportConfig.endDate}`, 20, 33);
+
+    doc.setTextColor(0);
+    doc.setFontSize(14);
+    doc.text("1. FINANCIAL HIGHLIGHTS", 20, 55);
+    
+    doc.setFontSize(10);
+    doc.text(`Total Revenue: ${formatCurrency(reportTotalRevenue)}`, 25, 65);
+    doc.text(`Total Expenses: ${formatCurrency(reportTotalExpenses)}`, 25, 72);
+    doc.text(`Net Profit: ${formatCurrency(reportNetProfit)}`, 25, 79);
+    doc.text(`Audit Health Score: ${auditScore}/100`, 25, 86);
+
+    doc.setFontSize(14);
+    doc.text("2. EXECUTIVE NARRATIVE", 20, 105);
+    
+    doc.setFontSize(9);
+    const splitText = doc.splitTextToSize(reportNarrative || "No narrative generated.", 170);
+    doc.text(splitText, 25, 115);
+
+    doc.save(`Financial_Report_${reportConfig.startDate}_${reportConfig.endDate}.pdf`);
+  };
+
   const handleBatchDownload = () => {
     setToast('Starting Batch Export...');
     invoices.forEach((inv, i) => {
@@ -1097,11 +1169,35 @@ export default function App() {
 
   const reportNetProfit = reportTotalRevenue - reportTotalExpenses;
 
+  // Real-time metrics
+  const costOfRevenue = reportFilteredTransactions
+    .filter(t => t.type === 'expense' && (t.cat === 'Infrastructure' || t.cat === 'Software' || t.cat === 'Cost of Sales'))
+    .reduce((sum, t) => sum + Math.abs(t.amt), 0);
+  
+  const grossMargin = reportTotalRevenue - costOfRevenue;
+  const grossMarginPct = reportTotalRevenue > 0 ? (grossMargin / reportTotalRevenue) * 100 : 0;
+  
+  const topClientsData = invoices.reduce((acc: Record<string, number>, inv) => {
+    acc[inv.client] = (acc[inv.client] || 0) + inv.amt;
+    return acc;
+  }, {});
+  const topClients = Object.entries(topClientsData)
+    .sort(([, a], [, b]) => b - a)
+    .map(([name, val]) => ({ name, val }));
+
+  const collectionEfficacy = (() => {
+    const total = invoices.reduce((s, i) => s + i.amt, 0);
+    const paid = invoices.filter(i => i.status === 'Paid').reduce((s, i) => s + i.amt, 0);
+    return total > 0 ? (paid / total) * 100 : 0;
+  })();
+
+  const auditScore = Math.max(0, 100 - (transactions.filter(t => t.status === 'Flagged').length * 4) - (invoices.filter(i => i.status === 'Overdue').length * 2));
+
   const waterfallData = [
     { name: 'Revenue', value: reportTotalRevenue, start: 0, fill: '#C28E4A' },
-    { name: 'Cost/Rev', value: -(reportTotalRevenue * 0.15), start: reportTotalRevenue, fill: '#ef4444' },
-    { name: 'Gross Margin', value: reportTotalRevenue * 0.85, start: 0, fill: '#C28E4A', isTotal: true },
-    { name: 'OpEx', value: -reportTotalExpenses, start: reportTotalRevenue * 0.85, fill: '#f87171' },
+    { name: 'Cost/Rev', value: -costOfRevenue, start: reportTotalRevenue, fill: '#ef4444' },
+    { name: 'Gross Margin', value: grossMargin, start: 0, fill: '#C28E4A', isTotal: true },
+    { name: 'OpEx', value: -(reportTotalExpenses - costOfRevenue), start: grossMargin, fill: '#f87171' },
     { name: 'Net Profit', value: reportNetProfit, start: 0, fill: '#10b981', isTotal: true },
   ].map(d => ({ 
     ...d, 
@@ -1941,74 +2037,91 @@ export default function App() {
         title: "Entity Configuration",
         desc: "Define your organization's identity to isolate fiscal reporting streams.",
         content: (
-          <div className="space-y-8 py-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="group relative">
-                 <label className="absolute -top-2.5 left-4 px-2 bg-[var(--color-bg-primary)] text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--color-text-tertiary)' }}>Signatory Name</label>
-                 <input 
-                   type="text" 
-                   placeholder="Your Full Name" 
-                   value={onboardingData.name}
-                   onChange={(e) => setOnboardingData(p => ({...p, name: e.target.value}))}
-                   className="w-full bg-transparent border-2 rounded-2xl px-6 py-5 text-sm font-medium outline-none" 
-                   style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
-                 />
+          <div className="space-y-10 py-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="flex flex-col gap-2">
+                 <label className="text-[10px] font-black uppercase tracking-[0.2em] ml-2" style={{ color: 'var(--color-text-tertiary)' }}>Signatory Name</label>
+                 <div className="relative group">
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Johnathan Silver" 
+                      value={onboardingData.name}
+                      onChange={(e) => setOnboardingData(p => ({...p, name: e.target.value}))}
+                      className="w-full bg-[var(--color-bg-secondary)] border-2 rounded-[2rem] px-8 py-6 text-sm font-medium outline-none transition-all focus:border-[#C28E4A] hover:border-white/20" 
+                      style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
+                    />
+                    <div className="absolute inset-0 rounded-[2rem] bg-[#C28E4A]/5 opacity-0 group-focus-within:opacity-100 pointer-events-none transition-opacity"></div>
+                 </div>
               </div>
-              <div className="group relative">
-                 <label className="absolute -top-2.5 left-4 px-2 bg-[var(--color-bg-primary)] text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--color-text-tertiary)' }}>Functional Currency</label>
-                 <select 
-                   value={onboardingData.currency}
-                   onChange={(e) => setOnboardingData(p => ({...p, currency: e.target.value}))}
-                   className="w-full bg-transparent border-2 rounded-2xl px-6 py-5 text-sm font-medium outline-none appearance-none cursor-pointer"
-                   style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
-                 >
-                   <option>USD - US Dollar</option>
-                   <option>EUR - Euro</option>
-                   <option>GBP - British Pound</option>
-                   <option>AED - UAE Dirham</option>
-                   <option>PKR - Pak Rupee</option>
-                 </select>
-                 <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none opacity-40" />
+              <div className="flex flex-col gap-2">
+                 <label className="text-[10px] font-black uppercase tracking-[0.2em] ml-2" style={{ color: 'var(--color-text-tertiary)' }}>Functional Currency</label>
+                 <div className="relative group">
+                    <select 
+                      value={onboardingData.currency}
+                      onChange={(e) => setOnboardingData(p => ({...p, currency: e.target.value}))}
+                      className="w-full bg-[var(--color-bg-secondary)] border-2 rounded-[2rem] px-8 py-6 text-sm font-medium outline-none appearance-none cursor-pointer transition-all focus:border-[#C28E4A] hover:border-white/20"
+                      style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
+                    >
+                      <option>USD - US Dollar</option>
+                      <option>EUR - Euro</option>
+                      <option>GBP - British Pound</option>
+                      <option>AED - UAE Dirham</option>
+                      <option>PKR - Pak Rupee</option>
+                    </select>
+                    <ChevronDown className="absolute right-8 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none opacity-40 group-focus-within:text-[#C28E4A]" />
+                    <div className="absolute inset-0 rounded-[2rem] bg-[#C28E4A]/5 opacity-0 group-focus-within:opacity-100 pointer-events-none transition-opacity"></div>
+                 </div>
               </div>
             </div>
-            <div className="group relative">
-               <label className="absolute -top-2.5 left-4 px-2 bg-[var(--color-bg-primary)] text-[10px] font-black uppercase tracking-[0.2em] transform transition-all group-focus-within:text-[#C28E4A]" style={{ color: 'var(--color-text-tertiary)' }}>Legal Entity Name</label>
-               <input 
-                 type="text" 
-                 placeholder="e.g. Blackwood Capital Holdings" 
-                 value={onboardingData.companyName}
-                 onChange={(e) => setOnboardingData(p => ({...p, companyName: e.target.value}))}
-                 className="w-full bg-transparent border-2 rounded-2xl px-6 py-5 text-lg font-medium transition-all outline-none" 
-                 style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
-               />
+
+            <div className="flex flex-col gap-2">
+               <label className="text-[10px] font-black uppercase tracking-[0.2em] ml-2" style={{ color: 'var(--color-text-tertiary)' }}>Legal Entity Name</label>
+               <div className="relative group">
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Blackwood Capital Holdings LTD" 
+                    value={onboardingData.companyName}
+                    onChange={(e) => setOnboardingData(p => ({...p, companyName: e.target.value}))}
+                    className="w-full bg-[var(--color-bg-secondary)] border-2 rounded-[2.5rem] px-8 py-7 text-xl font-medium transition-all outline-none focus:border-[#C28E4A] hover:border-white/20" 
+                    style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
+                  />
+                  <div className="absolute inset-0 rounded-[2.5rem] bg-[#C28E4A]/5 opacity-0 group-focus-within:opacity-100 pointer-events-none transition-opacity"></div>
+               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="group relative">
-                <label className="absolute -top-2.5 left-4 px-2 bg-[var(--color-bg-primary)] text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--color-text-tertiary)' }}>Industry Vertical</label>
-                <select 
-                  value={onboardingData.industry}
-                  onChange={(e) => setOnboardingData(p => ({...p, industry: e.target.value}))}
-                  className="w-full bg-transparent border-2 rounded-2xl px-6 py-5 text-sm font-medium outline-none appearance-none cursor-pointer"
-                  style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
-                >
-                  <option>Technology & SaaS</option>
-                  <option>Financial Services</option>
-                  <option>Biotech & Healthcare</option>
-                  <option>Strategic Manufacturing</option>
-                  <option>Institutional Real Estate</option>
-                </select>
-                <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none opacity-40" />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] ml-2" style={{ color: 'var(--color-text-tertiary)' }}>Industry Vertical</label>
+                <div className="relative group">
+                  <select 
+                    value={onboardingData.industry}
+                    onChange={(e) => setOnboardingData(p => ({...p, industry: e.target.value}))}
+                    className="w-full bg-[var(--color-bg-secondary)] border-2 rounded-[2rem] px-8 py-6 text-sm font-medium outline-none appearance-none cursor-pointer transition-all focus:border-[#C28E4A] hover:border-white/20"
+                    style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
+                  >
+                    <option>Technology & SaaS</option>
+                    <option>Financial Services</option>
+                    <option>Biotech & Healthcare</option>
+                    <option>Strategic Manufacturing</option>
+                    <option>Institutional Real Estate</option>
+                  </select>
+                  <ChevronDown className="absolute right-8 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none opacity-40 group-focus-within:text-[#C28E4A]" />
+                  <div className="absolute inset-0 rounded-[2rem] bg-[#C28E4A]/5 opacity-0 group-focus-within:opacity-100 pointer-events-none transition-opacity"></div>
+                </div>
               </div>
-              <div className="group relative">
-                <label className="absolute -top-2.5 left-4 px-2 bg-[var(--color-bg-primary)] text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--color-text-tertiary)' }}>Estimated FTEs</label>
-                <input 
-                  type="number" 
-                  placeholder="50" 
-                  value={onboardingData.teamSize}
-                  onChange={(e) => setOnboardingData(p => ({...p, teamSize: e.target.value}))}
-                  className="w-full bg-transparent border-2 rounded-2xl px-6 py-5 text-sm font-medium outline-none" 
-                  style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
-                />
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] ml-2" style={{ color: 'var(--color-text-tertiary)' }}>Estimated FTEs</label>
+                <div className="relative group">
+                  <input 
+                    type="number" 
+                    placeholder="e.g. 50" 
+                    value={onboardingData.teamSize}
+                    onChange={(e) => setOnboardingData(p => ({...p, teamSize: e.target.value}))}
+                    className="w-full bg-[var(--color-bg-secondary)] border-2 rounded-[2rem] px-8 py-6 text-sm font-medium outline-none transition-all focus:border-[#C28E4A] hover:border-white/20" 
+                    style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
+                  />
+                  <div className="absolute inset-0 rounded-[2rem] bg-[#C28E4A]/5 opacity-0 group-focus-within:opacity-100 pointer-events-none transition-opacity"></div>
+                </div>
               </div>
             </div>
           </div>
@@ -2018,34 +2131,39 @@ export default function App() {
         title: "Feed Ingestion",
         desc: "Securely link your primary capital accounts for automated bookkeeping.",
         content: (
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-1 gap-3">
+          <div className="space-y-6 py-4">
+            <div className="grid grid-cols-1 gap-4">
               {['Connect Chase Business', 'Connect Mercury Bank', 'Connect Stripe Capital', 'Connect Plaid Ecosystem'].map((bank) => {
                 const isConnected = connectedBanks.has(bank);
                 return (
                   <button 
                     key={bank} 
                     onClick={() => toggleBank(bank)}
-                    className={`flex items-center justify-between p-5 rounded-2xl border transition-all group ${
-                      isConnected ? 'bg-[var(--color-brand)]/5 border-[var(--color-brand)]' : 'bg-transparent border-[var(--color-border)] hover:bg-[var(--color-bg-hover)]'
+                    className={`flex items-center justify-between p-6 rounded-[2rem] border-2 transition-all group relative overflow-hidden ${
+                      isConnected ? 'bg-[var(--color-brand)]/5 border-[#C28E4A]' : 'bg-transparent border-[var(--color-border)] hover:bg-[var(--color-bg-hover)] hover:border-white/20'
                     }`}
                   >
-                    <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-                        isConnected ? 'bg-[#C28E4A] text-white shadow-lg' : 'bg-[var(--color-bg-secondary)]'
+                    <div className="flex items-center gap-5 relative z-10">
+                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 ${
+                        isConnected ? 'bg-[#C28E4A] text-white shadow-xl rotate-3' : 'bg-[var(--color-bg-secondary)]'
                       }`}>
-                        <Database className="w-5 h-5" />
+                        <Database className={`w-6 h-6 ${isConnected ? 'animate-pulse' : 'text-gray-400'}`} />
                       </div>
                       <div className="text-left">
-                         <span className="text-sm font-bold block" style={{ color: isConnected ? '#C28E4A' : 'var(--color-text-primary)' }}>{bank}</span>
-                         <span className="text-[10px] text-gray-400 uppercase font-black tracking-widest">{isConnected ? 'Live Sync Active' : 'Available for Linking'}</span>
+                         <span className="text-base font-bold block transition-colors" style={{ color: isConnected ? '#C28E4A' : 'var(--color-text-primary)' }}>{bank}</span>
+                         <div className="flex items-center gap-1.5 mt-1">
+                            <div className={`w-1 h-1 rounded-full ${isConnected ? 'bg-[#C28E4A]' : 'bg-gray-500'}`}></div>
+                            <span className="text-[10px] text-gray-400 uppercase font-black tracking-widest">{isConnected ? 'Encrypted Channel Established' : 'Awaiting Secure Protocol'}</span>
+                         </div>
                       </div>
                     </div>
-                    <div className={`w-6 h-6 rounded-full border-2 transition-all flex items-center justify-center ${
-                      isConnected ? 'bg-[#C28E4A] border-[#C28E4A]' : 'bg-transparent border-[var(--color-border)]'
+                    <div className={`w-8 h-8 rounded-full border-2 transition-all duration-500 flex items-center justify-center relative z-10 ${
+                      isConnected ? 'bg-[#C28E4A] border-[#C28E4A] rotate-0' : 'bg-transparent border-[var(--color-border)] rotate-45'
                     }`}>
-                      {isConnected && <Check className="w-3 h-3 text-white" />}
+                      {isConnected ? <Check className="w-4 h-4 text-white" /> : <Plus className="w-4 h-4 text-gray-500" />}
                     </div>
+                    {/* Background Pattern */}
+                    <div className={`absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-[#C28E4A]/5 to-transparent transition-opacity duration-700 ${isConnected ? 'opacity-100' : 'opacity-0'}`}></div>
                   </button>
                 );
               })}
@@ -2057,18 +2175,21 @@ export default function App() {
         title: "Growth Mandate",
         desc: "Define the trajectory of your organization's performance benchmarks.",
         content: (
-          <div className="space-y-10 py-4">
-            <div className="space-y-6">
+          <div className="space-y-12 py-4">
+            <div className="space-y-8">
               <div className="flex justify-between items-end">
                 <div>
-                   <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Target Annual Growth</label>
-                   <p className="text-4xl font-serif italic mt-1" style={{ color: 'var(--color-text-primary)' }}>{onboardingData.growthTarget}%</p>
+                   <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">Target Annual Growth</label>
+                   <div className="flex items-baseline gap-2 mt-1">
+                      <p className="text-6xl font-serif italic" style={{ color: 'var(--color-text-primary)' }}>{onboardingData.growthTarget}%</p>
+                      <span className="text-[10px] uppercase font-black tracking-widest text-[#C28E4A]">Year-over-Year</span>
+                   </div>
                 </div>
-                <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${onboardingData.growthTarget > 60 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                <div className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-500 shadow-sm ${onboardingData.growthTarget > 60 ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-emerald-100 text-emerald-700 border border-emerald-200'}`}>
                    {onboardingData.growthTarget > 60 ? 'Aggressive Strategy' : 'Sustainable Policy'}
                 </div>
               </div>
-              <div className="relative h-2 bg-[var(--color-bg-secondary)] rounded-full group cursor-pointer">
+              <div className="relative h-4 bg-[var(--color-bg-secondary)] rounded-full group px-2 flex items-center border border-[var(--color-border)]">
                 <input 
                   type="range" 
                   min="0" max="100" 
@@ -2076,30 +2197,40 @@ export default function App() {
                   onChange={(e) => setOnboardingData(p => ({...p, growthTarget: +e.target.value}))}
                   className="absolute inset-0 w-full h-full opacity-0 z-20 cursor-pointer"
                 />
+                <div className="absolute inset-x-2 h-1 bg-[var(--color-bg-tertiary)] rounded-full">
+                  <motion.div 
+                    className="absolute top-0 left-0 h-full rounded-full bg-[#C28E4A] z-10" 
+                    animate={{ width: `${onboardingData.growthTarget}%` }}
+                  />
+                </div>
                 <motion.div 
-                  className="absolute top-0 left-0 h-full rounded-full bg-[#C28E4A] z-10" 
-                  animate={{ width: `${onboardingData.growthTarget}%` }}
-                />
-                <motion.div 
-                  className="absolute top-1/2 -translate-y-1/2 w-6 h-6 bg-white border-4 border-[#C28E4A] rounded-full shadow-xl z-30"
-                  animate={{ left: `calc(${onboardingData.growthTarget}% - 12px)` }}
-                />
+                  className="absolute top-1/2 -translate-y-1/2 w-8 h-8 bg-white border-2 border-[#C28E4A] rounded-xl shadow-2xl z-30 flex items-center justify-center group-active:scale-95 transition-transform"
+                  animate={{ left: `calc(${onboardingData.growthTarget}% - 16px)` }}
+                >
+                   <div className="w-1 h-3 bg-[#C28E4A]/30 rounded-full"></div>
+                </motion.div>
               </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-6">
-               <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Monthly Burn Threshold</label>
-                  <div className="p-5 rounded-2xl bg-[var(--color-bg-secondary)] border-2 border-transparent transition-all hover:border-[var(--color-brand)]/30">
-                     <p className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>{formatCurrency(onboardingData.maxBurn)}</p>
-                     <p className="text-[9px] text-gray-400 uppercase font-bold mt-1">Institutional Cap</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+               <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">Monthly Burn Threshold</label>
+                  <div className="p-6 rounded-[2rem] bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border)] transition-all hover:border-[#C28E4A]/30 group cursor-pointer">
+                     <p className="text-2xl font-bold font-display" style={{ color: 'var(--color-text-primary)' }}>{formatCurrency(onboardingData.maxBurn)}</p>
+                     <div className="flex items-center gap-2 mt-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></div>
+                        <p className="text-[9px] text-gray-400 uppercase font-bold tracking-widest">Global Institutional Cap</p>
+                     </div>
                   </div>
                </div>
-               <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Reporting Frequency</label>
-                  <div className="p-5 rounded-2xl bg-[var(--color-bg-secondary)] border-2 border-transparent transition-all hover:border-[var(--color-brand)]/30">
-                     <p className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>Real-Time</p>
-                     <p className="text-[9px] text-gray-400 uppercase font-bold mt-1">Instant Reconciliation</p>
+               <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">Reporting Frequency</label>
+                  <div className="p-6 rounded-[2rem] bg-[var(--color-bg-secondary)] border-2 border-[#C28E4A]/40 transition-all hover:border-[#C28E4A] group cursor-pointer ring-4 ring-[#C28E4A]/5">
+                     <p className="text-2xl font-bold font-display" style={{ color: '#C28E4A' }}>Real-Time</p>
+                     <div className="flex items-center gap-2 mt-1">
+                        <Zap className="w-2.5 h-2.5 text-[#C28E4A]" />
+                        <p className="text-[9px] text-[#C28E4A]/70 uppercase font-bold tracking-widest">Instant Ledger Reconciliation</p>
+                     </div>
                   </div>
                </div>
             </div>
@@ -3036,6 +3167,15 @@ export default function App() {
                 {/* PANEL 1 — Report header and controls */}
                 <div className={`p-8 rounded-[2.5rem] border flex flex-col lg:flex-row lg:items-center justify-between gap-8 ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-white border-slate-200 shadow-xl'}`}>
                   <div className="space-y-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 rounded-full bg-[#C28E4A] flex items-center justify-center text-white font-bold text-lg">
+                        {user.name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-[#C28E4A]">Welcome Back, {user.name.split(' ')[0]}</p>
+                        <p className="text-xs text-neutral-500 font-medium">Operating as {profileData.company}</p>
+                      </div>
+                    </div>
                     <h2 className={`text-4xl font-serif italic ${isDark ? 'text-white' : 'text-slate-950'}`}>AI Financial Reporting</h2>
                     <p className="text-sm text-neutral-500 font-medium">Analytic Period: {reportConfig.startDate} — {reportConfig.endDate}</p>
                   </div>
@@ -3127,10 +3267,10 @@ export default function App() {
                     <h3 className={`text-xl font-bold mb-8 ${isDark ? 'text-white' : 'text-slate-900'}`}>Profit & Loss Summary</h3>
                     <div className="space-y-4">
                       {[
-                        { label: 'Operating Revenue', val: reportTotalRevenue, type: 'primary' },
-                        { label: 'Cost of Revenue', val: reportTotalRevenue * 0.15, type: 'sub' },
-                        { label: 'Gross Margin', val: reportTotalRevenue * 0.85, type: 'total', pct: 85 },
-                        { label: 'Total Operating Expenses', val: reportTotalExpenses, type: 'primary' },
+                        { label: 'Total Revenue', val: reportTotalRevenue, type: 'primary' },
+                        { label: 'Cost of Revenue', val: costOfRevenue, type: 'sub' },
+                        { label: 'Gross Margin', val: grossMargin, type: 'total', pct: grossMarginPct },
+                        { label: 'Operating Expenses', val: reportTotalExpenses - costOfRevenue, type: 'primary' },
                         { label: 'Operating Income / EBITDA', val: reportNetProfit, type: 'final', pct: (reportNetProfit / (reportTotalRevenue || 1)) * 100 }
                       ].map((row, i) => (
                         <div key={i} className={`flex justify-between items-center py-3 ${row.type === 'total' || row.type === 'final' ? 'border-t border-neutral-100 dark:border-white/5 mt-4 pt-6' : ''}`}>
@@ -3341,10 +3481,16 @@ export default function App() {
                     <div className={`p-8 rounded-3xl border ${isDark ? 'bg-white/[0.02] border-white/5' : 'bg-slate-50 border-slate-100'} min-w-[280px]`}>
                        <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500 block mb-2">Collection Efficacy</span>
                        <div className="flex items-baseline gap-2 mb-4">
-                          <h4 className={`text-3xl font-serif italic ${isDark ? 'text-white' : 'text-slate-950'}`}>88.4%</h4>
-                          <span className="text-[10px] font-bold text-emerald-500">+2.1%</span>
+                          <h4 className={`text-3xl font-serif italic ${isDark ? 'text-white' : 'text-slate-950'}`}>
+                            {collectionEfficacy.toFixed(1)}%
+                          </h4>
+                          <span className={`text-[10px] font-bold ${collectionEfficacy > 80 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                            {collectionEfficacy > 80 ? '+2.1%' : '-1.4%'}
+                          </span>
                        </div>
-                       <p className="text-xs text-neutral-400 leading-relaxed font-medium">Your average collection cycle is currently trending positive.</p>
+                       <p className="text-xs text-neutral-400 leading-relaxed font-medium">
+                         {collectionEfficacy > 80 ? 'Your average collection cycle is currently trending positive.' : 'Focus on reducing overdue accounts to improve liquidity.'}
+                       </p>
                     </div>
                   </div>
                 </div>
